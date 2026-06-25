@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf
 
 @pytest.fixture
 def temp_pdf():
@@ -117,5 +117,33 @@ def test_merge_pdfs_nonexistent_file(temp_pdf_factory):
     path_a = temp_pdf_factory(["X"])
     with pytest.raises(ValueError, match="Failed to open or read PDF file at nonexistent_file.pdf"):
         merge_pdfs([path_a, "nonexistent_file.pdf"])
+
+def test_split_pdf_success(temp_pdf):
+    blobs = split_pdf(temp_pdf, [[0], [1, 2]])
+    assert len(blobs) == 2
+    assert isinstance(blobs[0], bytes)
+    assert isinstance(blobs[1], bytes)
+
+    with fitz.open(stream=blobs[0], filetype="pdf") as doc1:
+        assert doc1.page_count == 1
+        assert "page 1" in doc1[0].get_text()
+
+    with fitz.open(stream=blobs[1], filetype="pdf") as doc2:
+        assert doc2.page_count == 2
+        assert "page 2" in doc2[0].get_text()
+        assert "page 3" in doc2[1].get_text()
+
+def test_split_pdf_empty_groups(temp_pdf):
+    with pytest.raises(ValueError, match="page_groups cannot be empty"):
+        split_pdf(temp_pdf, [])
+
+def test_split_pdf_empty_group_nested(temp_pdf):
+    with pytest.raises(ValueError, match="page_order cannot be empty"):
+        split_pdf(temp_pdf, [[]])
+
+def test_split_pdf_out_of_range(temp_pdf):
+    with pytest.raises(ValueError):
+        split_pdf(temp_pdf, [[0], [5]])
+
 
 

@@ -93,4 +93,24 @@ def merge_pdfs(pdf_paths: list[str]) -> bytes:
     finally:
         result_doc.close()
 
+def split_pdf(pdf_path: str, page_groups: list[list[int]]) -> list[bytes]:
+    """
+    Splits a PDF document into multiple documents defined by lists of page indices, returning a list of byte streams.
+
+    Why this exists:
+    Splitting a document is really just producing several smaller documents, each defined by which pages 
+    (and in what order) it should contain. This function reuses the already-tested `reorder_and_delete_pages`
+    function for each group of indices, preventing duplication of selection and range-checking logic.
+    """
+    if not page_groups:
+        raise ValueError("page_groups cannot be empty")
+
+    split_results = []
+    for group in page_groups:
+        result_bytes = reorder_and_delete_pages(pdf_path, group)
+        split_results.append(result_bytes)
+        
+    return split_results
+
+
 
