@@ -137,4 +137,113 @@ def test_get_thumbnail_file_not_found(client):
     assert response.status_code == 404
     assert 'error' in response.get_json()
 
+def test_process_pages_success(client, app):
+    # Build a small 3-page valid PDF in-memory with fitz
+    doc = fitz.open()
+    for i in range(3):
+        page = doc.new_page()
+        page.insert_text((50, 50), f"This is page {i + 1}")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    # Upload PDF
+    data = {
+        'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')
+    }
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert upload_response.status_code == 200
+    file_id = upload_response.get_json()['file_id']
+
+    # POST to /pages/process
+    process_data = {
+        "file_id": file_id,
+        "page_order": [2, 0]
+    }
+    response = client.post('/pages/process', json=process_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    assert response.headers.get('Content-Disposition') == 'attachment; filename=processed.pdf'
+
+    # Verify the response body opens with fitz as a valid 2-page PDF
+    with fitz.open(stream=response.data, filetype="pdf") as result_doc:
+        assert result_doc.page_count == 2
+        assert "page 3" in result_doc[0].get_text()
+        assert "page 1" in result_doc[1].get_text()
+
+    # Cleanup the saved file
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_process_pages_missing_page_order(client, app):
+    # Build a small 3-page valid PDF in-memory
+    doc = fitz.open()
+    for i in range(3):
+        page = doc.new_page()
+        page.insert_text((50, 50), f"This is page {i + 1}")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    # Upload PDF
+    data = {
+        'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')
+    }
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert upload_response.status_code == 200
+    file_id = upload_response.get_json()['file_id']
+
+    # POST to /pages/process with missing page_order
+    process_data = {
+        "file_id": file_id
+    }
+    response = client.post('/pages/process', json=process_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    # Cleanup the saved file
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_process_pages_out_of_range(client, app):
+    # Build a small 3-page valid PDF in-memory
+    doc = fitz.open()
+    for i in range(3):
+        page = doc.new_page()
+        page.insert_text((50, 50), f"This is page {i + 1}")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    # Upload PDF
+    data = {
+        'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')
+    }
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert upload_response.status_code == 200
+    file_id = upload_response.get_json()['file_id']
+
+    # POST to /pages/process with out of range page_order
+    process_data = {
+        "file_id": file_id,
+        "page_order": [0, 99]
+    }
+    response = client.post('/pages/process', json=process_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    # Cleanup the saved file
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_process_pages_invalid_uuid(client):
+    process_data = {
+        "file_id": "not-a-uuid",
+        "page_order": [0]
+    }
+    response = client.post('/pages/process', json=process_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+
 

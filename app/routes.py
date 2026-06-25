@@ -2,7 +2,7 @@ import os
 import uuid
 from flask import Blueprint, request, jsonify, current_app, Response
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages
 
 main = Blueprint('main', __name__)
 
@@ -59,5 +59,41 @@ def get_thumbnail(file_id, page_number):
         return jsonify({"error": str(e)}), 400
 
     return Response(png_bytes, mimetype='image/png'), 200
+
+@main.route('/pages/process', methods=['POST'])
+def process_pages():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON body provided"}), 400
+
+    file_id = data.get("file_id")
+    if not file_id:
+        return jsonify({"error": "Missing file_id in JSON body"}), 400
+
+    try:
+        uuid.UUID(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id format"}), 400
+
+    filename = secure_filename(f"{file_id}.pdf")
+    path = os.path.join(current_app.instance_path, 'uploads', filename)
+
+    if not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    if "page_order" not in data or not isinstance(data["page_order"], list):
+        return jsonify({"error": "page_order is missing or not a list"}), 400
+
+    page_order = data["page_order"]
+
+    try:
+        pdf_bytes = reorder_and_delete_pages(path, page_order)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    response = Response(pdf_bytes, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = 'attachment; filename=processed.pdf'
+    return response, 200
+
 
 
