@@ -70,3 +70,71 @@ def test_upload_no_file(client):
     assert response.status_code == 400
     assert 'error' in response.get_json()
 
+def test_get_thumbnail_success(client, app):
+    # Build a small 1-page valid PDF in-memory with fitz
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "Test PDF")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    # Upload PDF
+    data = {
+        'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')
+    }
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert upload_response.status_code == 200
+    file_id = upload_response.get_json()['file_id']
+
+    # GET thumbnail for page 0
+    response = client.get(f'/thumbnail/{file_id}/0')
+    assert response.status_code == 200
+    assert response.content_type == 'image/png'
+    assert response.data.startswith(b'\x89PNG')
+
+    # Cleanup the saved file
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_get_thumbnail_out_of_range(client, app):
+    # Build a small 1-page valid PDF in-memory with fitz
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "Test PDF")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    # Upload PDF
+    data = {
+        'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')
+    }
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert upload_response.status_code == 200
+    file_id = upload_response.get_json()['file_id']
+
+    # GET thumbnail for out-of-range page 99
+    response = client.get(f'/thumbnail/{file_id}/99')
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    # Cleanup the saved file
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_get_thumbnail_invalid_uuid(client):
+    # GET thumbnail with non-UUID file_id format
+    response = client.get('/thumbnail/not-a-real-uuid/0')
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+def test_get_thumbnail_file_not_found(client):
+    import uuid
+    # GET thumbnail with random UUID format but not uploaded
+    random_uuid = str(uuid.uuid4())
+    response = client.get(f'/thumbnail/{random_uuid}/0')
+    assert response.status_code == 404
+    assert 'error' in response.get_json()
+
+
