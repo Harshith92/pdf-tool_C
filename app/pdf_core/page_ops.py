@@ -40,3 +40,30 @@ def render_thumbnail(pdf_path: str, page_number: int, zoom: float = 0.3) -> byte
         raise
     except Exception as e:
         raise ValueError(f"Could not process PDF file at {pdf_path}: {e}") from e
+
+def reorder_and_delete_pages(pdf_path: str, page_order: list[int]) -> bytes:
+    """
+    Reorders and/or deletes pages in a PDF document based on a list of page indices, and returns the result as bytes.
+
+    Why this exists:
+    This function powers both the 'reorder' and 'delete' operations in the visual page editor.
+    Instead of performing incremental page manipulation, the frontend submits the final desired state
+    as a list of page indices to keep. This single function handles reordering, deleting, and duplicating
+    pages in one efficient operation using PyMuPDF's select method.
+    """
+    if not page_order:
+        raise ValueError("page_order cannot be empty")
+
+    try:
+        with fitz.open(pdf_path) as doc:
+            for idx in page_order:
+                if idx < 0 or idx >= doc.page_count:
+                    raise ValueError(f"Page index {idx} is out of range. The PDF contains {doc.page_count} pages.")
+            
+            doc.select(page_order)
+            return doc.write()
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not reorder/delete pages in PDF file at {pdf_path}: {e}") from e
+
