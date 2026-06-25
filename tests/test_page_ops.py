@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs
 
 @pytest.fixture
 def temp_pdf():
@@ -24,6 +24,31 @@ def temp_pdf():
     # Clean up the temp file after the tests run
     if os.path.exists(temp_path):
         os.remove(temp_path)
+
+@pytest.fixture
+def temp_pdf_factory():
+    created_files = []
+
+    def _create_temp_pdf(pages_text: list[str]) -> str:
+        doc = fitz.open()
+        for text in pages_text:
+            page = doc.new_page()
+            page.insert_text((50, 50), text)
+        
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
+            temp_path = tf.name
+            
+        doc.save(temp_path)
+        doc.close()
+        created_files.append(temp_path)
+        return temp_path
+
+    yield _create_temp_pdf
+
+    for path in created_files:
+        if os.path.exists(path):
+            os.remove(path)
+
 
 def test_get_page_count(temp_pdf):
     assert get_page_count(temp_pdf) == 3
@@ -66,4 +91,31 @@ def test_reorder_and_delete_pages_empty_list(temp_pdf):
 def test_reorder_and_delete_pages_out_of_range(temp_pdf):
     with pytest.raises(ValueError):
         reorder_and_delete_pages(temp_pdf, [0, 5])
+
+def test_merge_pdfs_success(temp_pdf_factory):
+    path_a = temp_pdf_factory(["A1", "A2"])
+    path_b = temp_pdf_factory(["B1"])
+
+    result_bytes = merge_pdfs([path_a, path_b])
+
+    with fitz.open(stream=result_bytes, filetype="pdf") as result_doc:
+        assert result_doc.page_count == 3
+        assert "A1" in result_doc[0].get_text()
+        assert "A2" in result_doc[1].get_text()
+        assert "B1" in result_doc[2].get_text()
+
+def test_merge_pdfs_single_file(temp_pdf_factory):
+    path_a = temp_pdf_factory(["A1"])
+    with pytest.raises(ValueError, match="merge requires at least 2 PDF files"):
+        merge_pdfs([path_a])
+
+def test_merge_pdfs_empty_list():
+    with pytest.raises(ValueError, match="pdf_paths cannot be empty"):
+        merge_pdfs([])
+
+def test_merge_pdfs_nonexistent_file(temp_pdf_factory):
+    path_a = temp_pdf_factory(["X"])
+    with pytest.raises(ValueError, match="Failed to open or read PDF file at nonexistent_file.pdf"):
+        merge_pdfs([path_a, "nonexistent_file.pdf"])
+
 

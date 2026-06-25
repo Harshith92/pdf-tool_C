@@ -67,3 +67,30 @@ def reorder_and_delete_pages(pdf_path: str, page_order: list[int]) -> bytes:
     except Exception as e:
         raise ValueError(f"Could not reorder/delete pages in PDF file at {pdf_path}: {e}") from e
 
+def merge_pdfs(pdf_paths: list[str]) -> bytes:
+    """
+    Merges multiple PDF documents into a single PDF and returns the result as bytes.
+
+    Why this exists:
+    This function lets users combine multiple uploaded PDFs into a single output file.
+    The pages of each input PDF are appended onto the end of the output PDF in the
+    exact order they are specified in the pdf_paths list.
+    """
+    if not pdf_paths:
+        raise ValueError("pdf_paths cannot be empty")
+    if len(pdf_paths) < 2:
+        raise ValueError("merge requires at least 2 PDF files")
+
+    result_doc = fitz.open()
+    try:
+        for path in pdf_paths:
+            try:
+                with fitz.open(path) as doc:
+                    result_doc.insert_pdf(doc)
+            except Exception as e:
+                raise ValueError(f"Failed to open or read PDF file at {path}: {e}") from e
+        return result_doc.write()
+    finally:
+        result_doc.close()
+
+
