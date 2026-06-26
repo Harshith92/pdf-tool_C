@@ -23,6 +23,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Allow dropping and reorder visually in the DOM
+    thumbnailsContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggingEl = thumbnailsContainer.querySelector('.dragging');
+        if (!draggingEl) return;
+
+        const target = e.target.closest('.thumb');
+        if (!target || target === draggingEl) return;
+
+        const rect = target.getBoundingClientRect();
+        const midpoint = rect.left + rect.width / 2;
+        if (e.clientX < midpoint) {
+            thumbnailsContainer.insertBefore(draggingEl, target);
+        } else {
+            thumbnailsContainer.insertBefore(draggingEl, target.nextSibling);
+        }
+    });
+
     // Trigger click on input when clicking the upload zone
     uploadZone.addEventListener('click', () => {
         fileInput.click();
@@ -65,6 +83,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const thumbDiv = document.createElement('div');
                 thumbDiv.classList.add('thumb');
                 thumbDiv.dataset.pageIndex = pageIndex;
+                thumbDiv.draggable = true;
+
+                // Drag events
+                thumbDiv.addEventListener('dragstart', (e) => {
+                    thumbDiv.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', '');
+                });
+
+                thumbDiv.addEventListener('dragend', () => {
+                    thumbDiv.classList.remove('dragging');
+                });
 
                 const img = document.createElement('img');
                 img.src = `/thumbnail/${currentFileId}/${pageIndex}`;
