@@ -2,7 +2,7 @@ import os
 import uuid
 import io
 import zipfile
-from flask import Blueprint, request, jsonify, current_app, Response
+from flask import Blueprint, request, jsonify, current_app, Response, render_template
 from werkzeug.utils import secure_filename
 from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf
 
@@ -10,7 +10,8 @@ main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
-    return 'PDF Tool is alive!', 200
+    return render_template('base.html'), 200
+
 
 @main.route('/upload', methods=['POST'])
 def upload_pdf():

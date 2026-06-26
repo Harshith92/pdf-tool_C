@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Tool</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=IBM+Plex+Mono&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>PDF Tool</h1>
+            <p class="tagline">Merge, split, and rearrange pages — right in your browser.</p>
+        </header>
+        
+        <nav class="tabs">
+            <button class="active" data-tab="reorder">Reorder & Delete</button>
+            <button data-tab="merge">Merge</button>
+            <button data-tab="split">Split</button>
+        </nav>
+        
+        <main>
+            <section id="section-reorder">
+                <h2>Reorder & Delete</h2>
+                <p>Drag pages into the order you want, click the X to remove any you don't need.</p>
+                <div class="upload-zone" id="reorder-upload-zone">
+                    <input type="file" id="reorder-file-input" accept="application/pdf" hidden>
+                    <p>Click to choose a PDF</p>
+                </div>
+                <p class="upload-error hidden" id="reorder-upload-error"></p>
+                <div class="thumbnail-grid" id="reorder-thumbnails"></div>
+            </section>
+            
+            <section id="section-merge" class="hidden">
+                <h2>Merge</h2>
+                <p>Upload two or more PDFs and combine them into one, in the order you choose.</p>
+            </section>
+            
+            <section id="section-split" class="hidden">
+                <h2>Split</h2>
+                <p>Pick which pages go into which output file.</p>
+            </section>
+        </main>
+    </div>
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/reorder.js') }}" defer></script>
+</body>
+</html>

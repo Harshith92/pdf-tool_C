@@ -1,0 +1,183 @@
+/*
+ * Light Table Concept:
+ * - Dark surround (var(--bg)) mimics a dimmed workbench room.
+ * - Content sections mimic a light table box (backlit film feeling) using var(--card-bg).
+ * - Amber (var(--accent)) mimics the warm glow of the light table lamp.
+ */
+
+:root {
+    --bg: #14151A;
+    --paper: #FAF8F3;
+    --accent: #E8A33D;
+    --muted: #8B93A1;
+    --danger: #C4543C;
+    --success: #6B9080;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+
+    /* Extra variables to ensure absolutely no hardcoded hex codes exist below */
+    --text-main: #FAF8F3;
+    --text-body: #E2E4E9;
+    --border-subtle: #23262D;
+    --card-bg: #1A1C23;
+    --label-dark: #3A3D45;
+}
+
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text-body);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 4rem 2rem;
+    line-height: 1.5;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+header h1 {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+    letter-spacing: -0.025em;
+}
+
+.tagline {
+    font-family: var(--font-mono);
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
+}
+
+.tabs {
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 1rem;
+}
+
+.tabs button {
+    background: none;
+    border: none;
+    outline: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 0.75rem 0.5rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.tabs button:hover {
+    color: var(--text-main);
+}
+
+.tabs button.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+main {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 2.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+main section h2 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.75rem;
+}
+
+main section p {
+    font-family: var(--font-body);
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+.hidden {
+    display: none;
+}
+
+.upload-zone {
+    border: 2px dashed var(--muted);
+    border-radius: 8px;
+    padding: 2.5rem;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    transition: border-color 0.2s ease, color 0.2s ease;
+    margin-top: 1.5rem;
+}
+
+.upload-zone:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+}
+
+.upload-error {
+    color: var(--danger);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.thumbnail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.thumb {
+    background-color: var(--paper);
+    border-radius: 4px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.thumb img {
+    max-width: 100%;
+    border-radius: 2px;
+    display: block;
+}
+
+.thumb .page-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--label-dark);
+}
+

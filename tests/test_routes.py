@@ -19,7 +19,8 @@ def client(app):
 def test_index_route(client):
     response = client.get('/')
     assert response.status_code == 200
-    assert b'PDF Tool is alive!' in response.data
+    assert b'PDF Tool' in response.data
+
 
 def test_upload_valid_pdf(client, app):
     # Build a small 1-page valid PDF in-memory with fitz
