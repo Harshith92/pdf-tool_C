@@ -10,8 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectionInfo = document.getElementById('split-selection-info');
     const createGroupBtn = document.getElementById('split-create-group-btn');
     const groupsList = document.getElementById('split-groups-list');
+    const downloadBtn = document.getElementById('split-download-btn');
+    const processError = document.getElementById('split-process-error');
 
-    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !selectionInfo || !createGroupBtn || !groupsList) {
+    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !selectionInfo || !createGroupBtn || !groupsList || !downloadBtn || !processError) {
         return;
     }
 
@@ -27,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadError.textContent = '';
         uploadError.classList.add('hidden');
         thumbnailsContainer.innerHTML = '';
+        processError.textContent = '';
+        processError.classList.add('hidden');
 
         const formData = new FormData();
         formData.append('pdf_file', file);
@@ -70,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createGroupBtn.classList.remove('hidden');
             updateSplitSelectionInfo();
             renderSplitGroupsList();
+            updateSplitDownloadVisibility();
         })
         .catch(error => {
             uploadError.textContent = error.message;
@@ -122,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateSplitSelectionInfo();
         renderSplitGroupsList();
+        updateSplitDownloadVisibility();
     });
 
     function renderSplitGroupsList() {
@@ -167,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 renderSplitGroupsList();
+                updateSplitDownloadVisibility();
             });
 
             card.appendChild(span);
@@ -174,4 +181,50 @@ document.addEventListener('DOMContentLoaded', () => {
             groupsList.appendChild(card);
         });
     }
+
+    function updateSplitDownloadVisibility() {
+        if (splitGroups.length > 0) {
+            downloadBtn.classList.remove('hidden');
+        } else {
+            downloadBtn.classList.add('hidden');
+        }
+    }
+
+    downloadBtn.addEventListener('click', () => {
+        processError.textContent = '';
+        processError.classList.add('hidden');
+
+        fetch('/pages/split', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_id: splitFileId,
+                page_groups: splitGroups
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Split failed');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'split_files.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            processError.textContent = error.message;
+            processError.classList.remove('hidden');
+        });
+    });
 });
