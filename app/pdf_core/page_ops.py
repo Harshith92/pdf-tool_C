@@ -70,6 +70,8 @@ def reorder_and_delete_pages(pdf_path: str, page_order: list[int]) -> bytes:
 def merge_pdfs(pdf_paths: list[str]) -> bytes:
     """
     Merges multiple PDF documents into a single PDF and returns the result as bytes.
+    Pages from files with a different page size than the very first page get scaled
+    (never stretched) to match it, so the merged result looks visually consistent.
 
     Why this exists:
     This function lets users combine multiple uploaded PDFs into a single output file.
@@ -82,11 +84,26 @@ def merge_pdfs(pdf_paths: list[str]) -> bytes:
         raise ValueError("merge requires at least 2 PDF files")
 
     result_doc = fitz.open()
+    target_width = None
+    target_height = None
+
     try:
         for path in pdf_paths:
             try:
                 with fitz.open(path) as doc:
-                    result_doc.insert_pdf(doc)
+                    for page_index in range(doc.page_count):
+                        page = doc.load_page(page_index)
+                        rect = page.rect
+                        if target_width is None:
+                            target_width = rect.width
+                            target_height = rect.height
+
+                        # Check if this page's size matches the target within tolerance of 1.0
+                        if abs(rect.width - target_width) < 1.0 and abs(rect.height - target_height) < 1.0:
+                            result_doc.insert_pdf(doc, from_page=page_index, to_page=page_index)
+                        else:
+                            new_page = result_doc.new_page(width=target_width, height=target_height)
+                            new_page.show_pdf_page(new_page.rect, doc, pno=page_index, keep_proportion=True)
             except Exception as e:
                 raise ValueError(f"Failed to open or read PDF file at {path}: {e}") from e
         return result_doc.write()

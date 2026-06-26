@@ -145,5 +145,28 @@ def test_split_pdf_out_of_range(temp_pdf):
     with pytest.raises(ValueError):
         split_pdf(temp_pdf, [[0], [5]])
 
+def test_merge_pdfs_normalizes_different_page_sizes(tmp_path):
+    path_a = tmp_path / "a.pdf"
+    path_b = tmp_path / "b.pdf"
+
+    doc_a = fitz.open()
+    doc_a.new_page(width=300, height=300)
+    doc_a.save(str(path_a))
+    doc_a.close()
+
+    doc_b = fitz.open()
+    doc_b.new_page(width=600, height=800)
+    doc_b.save(str(path_b))
+    doc_b.close()
+
+    result_bytes = merge_pdfs([str(path_a), str(path_b)])
+
+    with fitz.open(stream=result_bytes, filetype="pdf") as result_doc:
+        assert result_doc.page_count == 2
+        assert abs(result_doc[0].rect.width - 300) < 1
+        assert abs(result_doc[0].rect.height - 300) < 1
+        assert abs(result_doc[1].rect.width - 300) < 1
+        assert abs(result_doc[1].rect.height - 300) < 1
+
 
 
