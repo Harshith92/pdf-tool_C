@@ -354,6 +354,108 @@ def test_merge_pages_nonexistent_uuid(client, app):
     if os.path.exists(saved_path):
         os.remove(saved_path)
 
+def test_split_pages_success(client, app):
+    # Build a small 3-page valid PDF in-memory with fitz
+    doc = fitz.open()
+    for i in range(3):
+        page = doc.new_page()
+        page.insert_text((50, 50), f"This is page {i + 1}")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    # Upload PDF
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert upload_response.status_code == 200
+    file_id = upload_response.get_json()['file_id']
+
+    # POST to /pages/split
+    split_data = {
+        "file_id": file_id,
+        "page_groups": [[0], [1, 2]]
+    }
+    response = client.post('/pages/split', json=split_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/zip'
+    assert response.headers.get('Content-Disposition') == 'attachment; filename=split_files.zip'
+
+    # Open response.data as a zip
+    import zipfile
+    with zipfile.ZipFile(io.BytesIO(response.data)) as zfile:
+        namelist = zfile.namelist()
+        assert len(namelist) == 2
+        assert "split_1.pdf" in namelist
+        assert "split_2.pdf" in namelist
+
+        # Verify split_1.pdf is a 1-page PDF
+        pdf1_bytes = zfile.read("split_1.pdf")
+        with fitz.open(stream=pdf1_bytes, filetype="pdf") as doc1:
+            assert doc1.page_count == 1
+
+        # Verify split_2.pdf is a 2-page PDF
+        pdf2_bytes = zfile.read("split_2.pdf")
+        with fitz.open(stream=pdf2_bytes, filetype="pdf") as doc2:
+            assert doc2.page_count == 2
+
+    # Cleanup
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_split_pages_missing_page_groups(client, app):
+    # Build PDF
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = upload_response.get_json()['file_id']
+
+    # POST to /pages/split with missing page_groups
+    split_data = {"file_id": file_id}
+    response = client.post('/pages/split', json=split_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    # Cleanup
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_split_pages_empty_page_groups(client, app):
+    # Build PDF
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    upload_response = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = upload_response.get_json()['file_id']
+
+    # POST to /pages/split with empty page_groups list []
+    split_data = {"file_id": file_id, "page_groups": []}
+    response = client.post('/pages/split', json=split_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    # Cleanup
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_split_pages_invalid_uuid(client):
+    split_data = {
+        "file_id": "not-a-uuid",
+        "page_groups": [[0]]
+    }
+    response = client.post('/pages/split', json=split_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+
 
 
 
