@@ -227,5 +227,24 @@ main section p {
     opacity: 0.4;
 }
 
+.reset-btn {
+    background: none;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.reset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+
 
 

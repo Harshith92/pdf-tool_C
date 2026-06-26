@@ -7,8 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadError = document.getElementById('reorder-upload-error');
     const thumbnailsContainer = document.getElementById('reorder-thumbnails');
     const pageCountInfo = document.getElementById('reorder-page-count-info');
+    const resetBtn = document.getElementById('reorder-reset-btn');
 
-    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !pageCountInfo) {
+    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !pageCountInfo || !resetBtn) {
         return;
     }
 
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         thumbnailsContainer.innerHTML = '';
         pageCountInfo.textContent = '';
         pageCountInfo.classList.remove('all-deleted');
+        resetBtn.classList.add('hidden');
 
         const formData = new FormData();
         formData.append('pdf_file', file);
@@ -118,11 +120,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 thumbnailsContainer.appendChild(thumbDiv);
             }
             updatePageCountDisplay();
+            resetBtn.classList.remove('hidden');
         })
         .catch(error => {
             uploadError.textContent = error.message;
             uploadError.classList.remove('hidden');
         });
+    });
+
+    // Reset button click handler
+    resetBtn.addEventListener('click', () => {
+        const thumbs = Array.from(thumbnailsContainer.querySelectorAll('.thumb'));
+        thumbs.sort((a, b) => parseInt(a.dataset.pageIndex) - parseInt(b.dataset.pageIndex));
+        
+        thumbs.forEach(thumb => {
+            thumbnailsContainer.appendChild(thumb);
+            thumb.classList.remove('deleted');
+            const deleteBtn = thumb.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.textContent = '×';
+            }
+        });
+        
+        updatePageCountDisplay();
     });
 });
 
