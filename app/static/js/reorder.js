@@ -8,8 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const thumbnailsContainer = document.getElementById('reorder-thumbnails');
     const pageCountInfo = document.getElementById('reorder-page-count-info');
     const resetBtn = document.getElementById('reorder-reset-btn');
+    const downloadBtn = document.getElementById('reorder-download-btn');
+    const processError = document.getElementById('reorder-process-error');
 
-    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !pageCountInfo || !resetBtn) {
+    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !pageCountInfo || !resetBtn || !downloadBtn || !processError) {
         return;
     }
 
@@ -61,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
         pageCountInfo.textContent = '';
         pageCountInfo.classList.remove('all-deleted');
         resetBtn.classList.add('hidden');
+        downloadBtn.classList.add('hidden');
+        processError.textContent = '';
+        processError.classList.add('hidden');
 
         const formData = new FormData();
         formData.append('pdf_file', file);
@@ -121,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updatePageCountDisplay();
             resetBtn.classList.remove('hidden');
+            downloadBtn.classList.remove('hidden');
         })
         .catch(error => {
             uploadError.textContent = error.message;
@@ -143,6 +149,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         updatePageCountDisplay();
+    });
+
+    // Download button click handler
+    downloadBtn.addEventListener('click', () => {
+        processError.textContent = '';
+        processError.classList.add('hidden');
+
+        const activeThumbs = Array.from(thumbnailsContainer.querySelectorAll('.thumb:not(.deleted)'));
+        const page_order = activeThumbs.map(thumb => parseInt(thumb.dataset.pageIndex, 10));
+
+        if (page_order.length === 0) {
+            processError.textContent = 'Cannot download -- all pages are deleted';
+            processError.classList.remove('hidden');
+            return;
+        }
+
+        fetch('/pages/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_id: currentFileId,
+                page_order: page_order
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Processing failed');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'processed.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            processError.textContent = error.message;
+            processError.classList.remove('hidden');
+        });
     });
 });
 

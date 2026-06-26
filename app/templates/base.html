@@ -34,8 +34,10 @@
                 </div>
                 <p class="upload-error hidden" id="reorder-upload-error"></p>
                 <div class="thumbnail-grid" id="reorder-thumbnails"></div>
-                <p id="reorder-page-count-info"></p>
+                <p id="reorder-page-count-info" class="info-text"></p>
                 <button id="reorder-reset-btn" class="reset-btn hidden">Reset</button>
+                <button id="reorder-download-btn" class="download-btn hidden">Download PDF</button>
+                <p class="upload-error hidden" id="reorder-process-error"></p>
             </section>
 
 
@@ -43,6 +45,13 @@
             <section id="section-merge" class="hidden">
                 <h2>Merge</h2>
                 <p>Upload two or more PDFs and combine them into one, in the order you choose.</p>
+                <div class="upload-zone" id="merge-upload-zone">
+                    <input type="file" id="merge-file-input" accept="application/pdf" multiple hidden>
+                    <p>Click to choose PDFs (select 2 or more)</p>
+                </div>
+                <p class="upload-error hidden" id="merge-upload-error"></p>
+                <div class="file-list" id="merge-file-list"></div>
+                <p class="info-text hidden" id="merge-file-count-info"></p>
             </section>
             
             <section id="section-split" class="hidden">
@@ -54,5 +63,6 @@
     <!-- JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/reorder.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/merge.js') }}" defer></script>
 </body>
 </html>

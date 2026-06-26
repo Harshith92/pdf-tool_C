@@ -206,7 +206,7 @@ main section p {
     transform: scale(1.1);
 }
 
-#reorder-page-count-info {
+.info-text {
     font-family: var(--font-mono);
     color: var(--muted);
     font-size: 0.85rem;
@@ -244,6 +244,74 @@ main section p {
     border-color: var(--accent);
     color: var(--accent);
 }
+
+.download-btn {
+    background-color: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 4px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    margin-left: 0.5rem;
+    transition: opacity 0.2s ease;
+}
+
+.download-btn:hover {
+    opacity: 0.85;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.file-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background-color: var(--paper);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.file-card img {
+    width: 48px;
+    height: auto;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.file-card .file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.file-card .file-name {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--label-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-card .file-pagecount {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--label-dark);
+    opacity: 0.7;
+}
+
 
 
 
