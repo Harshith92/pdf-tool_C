@@ -129,5 +129,43 @@ def split_pdf(pdf_path: str, page_groups: list[list[int]]) -> list[bytes]:
         
     return split_results
 
+def add_text_watermark(pdf_path: str, text: str, opacity: float = 0.3,
+                        rotation: float = 45, font_size: int = 50,
+                        color: tuple = (0.5, 0.5, 0.5)) -> bytes:
+    """
+    Applies a diagonal text watermark to all pages of a PDF document.
+
+    Why this exists:
+    TextWriter (not insert_text's rotate parameter) is used because it's PyMuPDF's
+    documented way to support both transparency and arbitrary rotation angles together,
+    which is exactly what a watermark needs.
+    """
+    if not text or not text.strip():
+        raise ValueError("text cannot be empty")
+    if not (0 <= opacity <= 1):
+        raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
+    if font_size <= 0:
+        raise ValueError(f"font_size must be positive, got {font_size}")
+
+    try:
+        with fitz.open(pdf_path) as doc:
+            for page in doc:
+                rect = page.rect
+                font = fitz.Font("helv")
+                text_width = font.text_length(text, fontsize=font_size)
+                
+                center = fitz.Point(rect.width / 2, rect.height / 2)
+                start_point = fitz.Point(center.x - text_width / 2, center.y)
+                
+                tw = fitz.TextWriter(rect, color=color, opacity=opacity)
+                tw.append(start_point, text, fontsize=font_size)
+                mat = fitz.Matrix(rotation)
+                tw.write_text(page, morph=(center, mat))
+            return doc.write()
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not add watermark to PDF file at {pdf_path}: {e}") from e
+
 
 

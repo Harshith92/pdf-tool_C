@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, add_text_watermark
 
 @pytest.fixture
 def temp_pdf():
@@ -167,6 +167,25 @@ def test_merge_pdfs_normalizes_different_page_sizes(tmp_path):
         assert abs(result_doc[0].rect.height - 300) < 1
         assert abs(result_doc[1].rect.width - 300) < 1
         assert abs(result_doc[1].rect.height - 300) < 1
+
+def test_add_text_watermark_success(temp_pdf):
+    result_bytes = add_text_watermark(temp_pdf, "DRAFT")
+    with fitz.open(stream=result_bytes, filetype="pdf") as doc:
+        assert doc.page_count == 3
+        for page in doc:
+            assert "DRAFT" in page.get_text()
+
+def test_add_text_watermark_empty_text(temp_pdf):
+    with pytest.raises(ValueError, match="text cannot be empty"):
+        add_text_watermark(temp_pdf, "")
+
+def test_add_text_watermark_invalid_opacity_high(temp_pdf):
+    with pytest.raises(ValueError, match="opacity must be between 0 and 1"):
+        add_text_watermark(temp_pdf, "DRAFT", opacity=1.5)
+
+def test_add_text_watermark_invalid_opacity_low(temp_pdf):
+    with pytest.raises(ValueError, match="opacity must be between 0 and 1"):
+        add_text_watermark(temp_pdf, "DRAFT", opacity=-0.1)
 
 
 
