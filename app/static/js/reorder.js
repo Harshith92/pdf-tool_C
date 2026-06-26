@@ -6,9 +6,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('reorder-file-input');
     const uploadError = document.getElementById('reorder-upload-error');
     const thumbnailsContainer = document.getElementById('reorder-thumbnails');
+    const pageCountInfo = document.getElementById('reorder-page-count-info');
 
-    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer) {
+    if (!uploadZone || !fileInput || !uploadError || !thumbnailsContainer || !pageCountInfo) {
         return;
+    }
+
+    // Update remaining vs total page count display message
+    function updatePageCountDisplay() {
+        const remainingCount = thumbnailsContainer.querySelectorAll('.thumb').length;
+        pageCountInfo.textContent = `${remainingCount} of ${currentPageCount} pages kept`;
+        if (remainingCount === 0) {
+            pageCountInfo.classList.add('all-deleted');
+        } else {
+            pageCountInfo.classList.remove('all-deleted');
+        }
     }
 
     // Trigger click on input when clicking the upload zone
@@ -25,8 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadError.textContent = '';
         uploadError.classList.add('hidden');
 
-        // Clear thumbnails
+        // Clear thumbnails and page count text
         thumbnailsContainer.innerHTML = '';
+        pageCountInfo.textContent = '';
+        pageCountInfo.classList.remove('all-deleted');
 
         const formData = new FormData();
         formData.append('pdf_file', file);
@@ -50,19 +64,30 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let pageIndex = 0; pageIndex < currentPageCount; pageIndex++) {
                 const thumbDiv = document.createElement('div');
                 thumbDiv.classList.add('thumb');
+                thumbDiv.dataset.pageIndex = pageIndex;
 
                 const img = document.createElement('img');
                 img.src = `/thumbnail/${currentFileId}/${pageIndex}`;
                 img.alt = `Page ${pageIndex + 1} thumbnail`;
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.textContent = '×';
+                deleteBtn.addEventListener('click', () => {
+                    thumbDiv.remove();
+                    updatePageCountDisplay();
+                });
 
                 const label = document.createElement('span');
                 label.classList.add('page-label');
                 label.textContent = `Page ${pageIndex + 1}`;
 
                 thumbDiv.appendChild(img);
+                thumbDiv.appendChild(deleteBtn);
                 thumbDiv.appendChild(label);
                 thumbnailsContainer.appendChild(thumbDiv);
             }
+            updatePageCountDisplay();
         })
         .catch(error => {
             uploadError.textContent = error.message;
@@ -70,3 +95,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
