@@ -59,6 +59,12 @@
             <section id="section-split" class="hidden">
                 <h2>Split</h2>
                 <p>Pick which pages go into which output file.</p>
+                <div class="upload-zone" id="split-upload-zone">
+                    <input type="file" id="split-file-input" accept="application/pdf" hidden>
+                    <p>Click to choose a PDF</p>
+                </div>
+                <p class="upload-error hidden" id="split-upload-error"></p>
+                <div class="thumbnail-grid" id="split-thumbnails"></div>
             </section>
         </main>
     </div>
@@ -66,5 +72,6 @@
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/reorder.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/merge.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/split.js') }}" defer></script>
 </body>
 </html>
