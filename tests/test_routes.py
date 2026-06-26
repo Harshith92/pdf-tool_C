@@ -245,5 +245,115 @@ def test_process_pages_invalid_uuid(client):
     assert response.status_code == 400
     assert 'error' in response.get_json()
 
+def test_merge_pages_success(client, app):
+    # PDF 1: 2 pages
+    doc1 = fitz.open()
+    doc1.new_page()
+    doc1.new_page()
+    pdf_bytes1 = doc1.write()
+    doc1.close()
+
+    # PDF 2: 1 page
+    doc2 = fitz.open()
+    doc2.new_page()
+    pdf_bytes2 = doc2.write()
+    doc2.close()
+
+    # Upload PDF 1
+    data1 = {'pdf_file': (io.BytesIO(pdf_bytes1), 'test1.pdf')}
+    res1 = client.post('/upload', data=data1, content_type='multipart/form-data')
+    assert res1.status_code == 200
+    id1 = res1.get_json()['file_id']
+
+    # Upload PDF 2
+    data2 = {'pdf_file': (io.BytesIO(pdf_bytes2), 'test2.pdf')}
+    res2 = client.post('/upload', data=data2, content_type='multipart/form-data')
+    assert res2.status_code == 200
+    id2 = res2.get_json()['file_id']
+
+    # Merge POST
+    merge_data = {"file_ids": [id1, id2]}
+    response = client.post('/pages/merge', json=merge_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    assert response.headers.get('Content-Disposition') == 'attachment; filename=merged.pdf'
+
+    with fitz.open(stream=response.data, filetype="pdf") as merged_doc:
+        assert merged_doc.page_count == 3
+
+    # Cleanup
+    for fid in [id1, id2]:
+        saved_path = os.path.join(app.instance_path, 'uploads', f"{fid}.pdf")
+        if os.path.exists(saved_path):
+            os.remove(saved_path)
+
+def test_merge_pages_single_file_id(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    id1 = res.get_json()['file_id']
+
+    # Merge POST with only 1 file_id in the list
+    merge_data = {"file_ids": [id1]}
+    response = client.post('/pages/merge', json=merge_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{id1}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_merge_pages_invalid_uuid(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    id1 = res.get_json()['file_id']
+
+    # Merge POST with invalid UUID
+    merge_data = {"file_ids": [id1, "not-a-uuid"]}
+    response = client.post('/pages/merge', json=merge_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{id1}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_merge_pages_nonexistent_uuid(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    id1 = res.get_json()['file_id']
+
+    import uuid
+    random_uuid = str(uuid.uuid4())
+
+    # Merge POST with one nonexistent UUID
+    merge_data = {"file_ids": [id1, random_uuid]}
+    response = client.post('/pages/merge', json=merge_data)
+    assert response.status_code == 404
+    assert 'error' in response.get_json()
+    assert random_uuid in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{id1}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
 
 

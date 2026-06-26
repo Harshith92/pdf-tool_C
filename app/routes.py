@@ -2,7 +2,7 @@ import os
 import uuid
 from flask import Blueprint, request, jsonify, current_app, Response
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs
 
 main = Blueprint('main', __name__)
 
@@ -94,6 +94,41 @@ def process_pages():
     response = Response(pdf_bytes, mimetype='application/pdf')
     response.headers['Content-Disposition'] = 'attachment; filename=processed.pdf'
     return response, 200
+
+@main.route('/pages/merge', methods=['POST'])
+def merge_pages():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON body provided"}), 400
+
+    file_ids = data.get("file_ids")
+    if not file_ids or not isinstance(file_ids, list) or len(file_ids) < 2:
+        return jsonify({"error": "file_ids is missing, not a list, or has fewer than 2 entries"}), 400
+
+    paths = []
+    for file_id in file_ids:
+        try:
+            uuid.UUID(file_id)
+        except ValueError:
+            return jsonify({"error": f"Invalid file_id format: {file_id}"}), 400
+
+        filename = secure_filename(f"{file_id}.pdf")
+        path = os.path.join(current_app.instance_path, 'uploads', filename)
+
+        if not os.path.exists(path):
+            return jsonify({"error": f"File not found: {file_id}"}), 404
+        
+        paths.append(path)
+
+    try:
+        pdf_bytes = merge_pdfs(paths)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    response = Response(pdf_bytes, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = 'attachment; filename=merged.pdf'
+    return response, 200
+
 
 
 
