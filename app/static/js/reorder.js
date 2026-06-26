@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update remaining vs total page count display message
     function updatePageCountDisplay() {
-        const remainingCount = thumbnailsContainer.querySelectorAll('.thumb').length;
+        const remainingCount = thumbnailsContainer.querySelectorAll('.thumb:not(.deleted)').length;
         pageCountInfo.textContent = `${remainingCount} of ${currentPageCount} pages kept`;
         if (remainingCount === 0) {
             pageCountInfo.classList.add('all-deleted');
@@ -74,7 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 deleteBtn.classList.add('delete-btn');
                 deleteBtn.textContent = '×';
                 deleteBtn.addEventListener('click', () => {
-                    thumbDiv.remove();
+                    const isDeleted = thumbDiv.classList.toggle('deleted');
+                    deleteBtn.textContent = isDeleted ? '↺' : '×';
                     updatePageCountDisplay();
                 });
 

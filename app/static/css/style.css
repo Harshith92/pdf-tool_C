@@ -212,4 +212,15 @@ main section p {
     margin-top: 0.75rem;
 }
 
+.thumb.deleted {
+    opacity: 0.35;
+    filter: grayscale(60%);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.thumb.deleted .delete-btn {
+    background-color: var(--success);
+}
+
+
 
