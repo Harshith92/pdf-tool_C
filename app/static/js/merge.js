@@ -100,6 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
             card.appendChild(img);
             card.appendChild(info);
 
+            const removeBtn = document.createElement('button');
+            removeBtn.classList.add('remove-btn');
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', () => {
+                const idx = mergeFiles.findIndex(f => f.fileId === fileEntry.fileId);
+                if (idx !== -1) {
+                    mergeFiles.splice(idx, 1);
+                    renderMergeFileList();
+                }
+            });
+            card.appendChild(removeBtn);
+
             fileList.appendChild(card);
         });
 
