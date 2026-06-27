@@ -4,7 +4,8 @@ import io
 import zipfile
 from flask import Blueprint, request, jsonify, current_app, Response, render_template
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position
+
 
 
 
@@ -202,6 +203,60 @@ def split_pages():
     response = Response(zip_bytes, mimetype='application/zip')
     response.headers['Content-Disposition'] = 'attachment; filename=split_files.zip'
     return response, 200
+
+@main.route('/pages/add-text', methods=['POST'])
+def add_text_route():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON body provided"}), 400
+
+    file_id = data.get("file_id")
+    if not file_id:
+        return jsonify({"error": "Missing file_id in JSON body"}), 400
+
+    try:
+        uuid.UUID(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id format"}), 400
+
+    filename = secure_filename(f"{file_id}.pdf")
+    path = os.path.join(current_app.instance_path, 'uploads', filename)
+
+    if not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    if "text" not in data:
+        return jsonify({"error": "Missing text in JSON body"}), 400
+
+    text = data["text"]
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({"error": "text cannot be empty"}), 400
+
+    if "x" not in data or "y" not in data:
+        return jsonify({"error": "x and y are required in JSON body"}), 400
+
+    x = data["x"]
+    y = data["y"]
+    if isinstance(x, bool) or isinstance(y, bool) or not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+        return jsonify({"error": "x and y must be numbers"}), 400
+
+    page_index = data.get("page_index", 0)
+
+    try:
+        pdf_bytes = insert_text_at_position(
+            path,
+            page_indices=[page_index],
+            text=text,
+            x=float(x),
+            y=float(y)
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    response = Response(pdf_bytes, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = 'attachment; filename=text_added.pdf'
+    return response, 200
+
 
 
 

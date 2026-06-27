@@ -152,6 +152,52 @@ def get_page_dimensions(pdf_path: str, page_number: int) -> tuple[float, float]:
     except Exception as e:
         raise ValueError(f"Could not get page dimensions from PDF file at {pdf_path}: {e}") from e
 
+def insert_text_at_position(pdf_path: str, page_indices: list[int],
+                             text: str, x: float, y: float,
+                             font_size: float = 24, rotation: float = 0,
+                             opacity: float = 1.0,
+                             color: tuple = (0, 0, 0)) -> bytes:
+    """
+    Inserts text at a specific coordinate position on one or more PDF pages.
+
+    Why this exists:
+    This single function powers both 'Add Text' (a single page in page_indices) and a
+    watermark-style effect (every page in page_indices) -- positioning is always exact
+    and explicit (x, y come from wherever the user clicked in the frontend), unlike
+    the earlier watermark attempt which tried to guess a centered position.
+    """
+    if not text or not text.strip():
+        raise ValueError("text cannot be empty")
+    if not page_indices:
+        raise ValueError("page_indices cannot be empty")
+    if not (0 <= opacity <= 1):
+        raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
+    if font_size <= 0:
+        raise ValueError(f"font_size must be positive, got {font_size}")
+
+    try:
+        with fitz.open(pdf_path) as doc:
+            for idx in page_indices:
+                if idx < 0 or idx >= doc.page_count:
+                    raise ValueError(
+                        f"Page index {idx} is out of range. The PDF contains {doc.page_count} pages."
+                    )
+            
+            for page_index in page_indices:
+                page = doc.load_page(page_index)
+                point = fitz.Point(x, y)
+                tw = fitz.TextWriter(page.rect, color=color, opacity=opacity)
+                tw.append(point, text, fontsize=font_size)
+                mat = fitz.Matrix(rotation)
+                tw.write_text(page, morph=(point, mat))
+            
+            return doc.write()
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not insert text at position in PDF file at {pdf_path}: {e}") from e
+
+
 
 
 

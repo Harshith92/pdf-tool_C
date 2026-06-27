@@ -351,6 +351,52 @@ main section p {
     border-radius: 3px;
 }
 
+.canvas-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-top: 1.5rem;
+}
+
+.canvas-wrapper img {
+    display: block;
+    max-width: 100%;
+    border-radius: 4px;
+    cursor: crosshair;
+}
+
+.addtext-marker {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 0 3px var(--bg);
+}
+
+#addtext-controls label {
+    display: block;
+    margin-top: 1rem;
+    font-family: var(--font-body);
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+#addtext-controls input[type="text"] {
+    display: block;
+    margin-top: 0.4rem;
+    width: 100%;
+    max-width: 300px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 0.5rem;
+    color: var(--text-body);
+    font-family: var(--font-body);
+}
+
+
 
 
 

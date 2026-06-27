@@ -22,7 +22,9 @@
             <button class="active" data-tab="reorder">Reorder & Delete</button>
             <button data-tab="merge">Merge</button>
             <button data-tab="split">Split</button>
+            <button data-tab="addtext">Add Text</button>
         </nav>
+
         
         <main>
             <section id="section-reorder">
@@ -71,7 +73,28 @@
                 <button id="split-download-btn" class="download-btn hidden">Split & Download</button>
                 <p class="upload-error hidden" id="split-process-error"></p>
             </section>
+            
+            <section id="section-addtext" class="hidden">
+                <h2>Add Text</h2>
+                <p>Click anywhere on the page to place your text.</p>
+                <div class="upload-zone" id="addtext-upload-zone">
+                    <input type="file" id="addtext-file-input" accept="application/pdf" hidden>
+                    <p>Click to choose a PDF</p>
+                </div>
+                <p class="upload-error hidden" id="addtext-upload-error"></p>
+                
+                <div class="canvas-wrapper hidden" id="addtext-canvas-wrapper">
+                    <img id="addtext-canvas-img" alt="Page preview">
+                </div>
+
+                <div class="hidden" id="addtext-controls">
+                    <label>Text to add<input type="text" id="addtext-text-input" placeholder="Click the page first"></label>
+                    <button id="addtext-download-btn" class="download-btn">Apply & Download</button>
+                    <p class="upload-error hidden" id="addtext-process-error"></p>
+                </div>
+            </section>
         </main>
+
 
     </div>
     <!-- JavaScript -->
@@ -79,6 +102,8 @@
     <script src="{{ url_for('static', filename='js/reorder.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/merge.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/split.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/addtext.js') }}" defer></script>
+
 
 
 </body>

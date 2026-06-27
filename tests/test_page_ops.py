@@ -2,7 +2,8 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position
+
 
 
 
@@ -180,6 +181,35 @@ def test_get_page_dimensions_success(temp_pdf):
 def test_get_page_dimensions_out_of_range(temp_pdf):
     with pytest.raises(ValueError):
         get_page_dimensions(temp_pdf, 99)
+
+def test_insert_text_at_position_single_page(temp_pdf):
+    result_bytes = insert_text_at_position(temp_pdf, [0], "Hello", x=100, y=100)
+    with fitz.open(stream=result_bytes, filetype="pdf") as doc:
+        assert doc.page_count == 3
+        assert "Hello" in doc[0].get_text()
+        assert "Hello" not in doc[1].get_text()
+        assert "Hello" not in doc[2].get_text()
+
+def test_insert_text_at_position_multi_page(temp_pdf):
+    result_bytes = insert_text_at_position(temp_pdf, [0, 2], "Stamped", x=50, y=50)
+    with fitz.open(stream=result_bytes, filetype="pdf") as doc:
+        assert doc.page_count == 3
+        assert "Stamped" in doc[0].get_text()
+        assert "Stamped" not in doc[1].get_text()
+        assert "Stamped" in doc[2].get_text()
+
+def test_insert_text_at_position_empty_text(temp_pdf):
+    with pytest.raises(ValueError):
+        insert_text_at_position(temp_pdf, [0], "", x=0, y=0)
+
+def test_insert_text_at_position_invalid_opacity(temp_pdf):
+    with pytest.raises(ValueError):
+        insert_text_at_position(temp_pdf, [0], "Hi", x=0, y=0, opacity=1.5)
+
+def test_insert_text_at_position_invalid_page_index(temp_pdf):
+    with pytest.raises(ValueError):
+        insert_text_at_position(temp_pdf, [5], "Hi", x=0, y=0)
+
 
 
 

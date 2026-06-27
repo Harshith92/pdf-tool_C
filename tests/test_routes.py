@@ -541,6 +541,95 @@ def test_get_thumbnail_zoom_invalid(client, app):
     if os.path.exists(saved_path):
         os.remove(saved_path)
 
+def test_add_text_route_success(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "Base Content")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "Hi",
+        "x": 50,
+        "y": 50
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    assert response.headers.get('Content-Disposition') == 'attachment; filename=text_added.pdf'
+
+    with fitz.open(stream=response.data, filetype="pdf") as res_doc:
+        assert res_doc.page_count == 1
+        assert "Hi" in res_doc[0].get_text()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_add_text_route_missing_text(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "x": 50,
+        "y": 50
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_add_text_route_missing_x(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "Hi",
+        "y": 50
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_add_text_route_invalid_file_id(client):
+    post_data = {
+        "file_id": "not-a-valid-uuid",
+        "text": "Hi",
+        "x": 50,
+        "y": 50
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+
 
 
 
