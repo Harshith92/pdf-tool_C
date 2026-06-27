@@ -2,7 +2,8 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions
+
 
 
 @pytest.fixture
@@ -168,6 +169,18 @@ def test_merge_pdfs_normalizes_different_page_sizes(tmp_path):
         assert abs(result_doc[0].rect.height - 300) < 1
         assert abs(result_doc[1].rect.width - 300) < 1
         assert abs(result_doc[1].rect.height - 300) < 1
+
+def test_get_page_dimensions_success(temp_pdf):
+    width, height = get_page_dimensions(temp_pdf, 0)
+    assert isinstance(width, float)
+    assert isinstance(height, float)
+    assert width > 0
+    assert height > 0
+
+def test_get_page_dimensions_out_of_range(temp_pdf):
+    with pytest.raises(ValueError):
+        get_page_dimensions(temp_pdf, 99)
+
 
 
 

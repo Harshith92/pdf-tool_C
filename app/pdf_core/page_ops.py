@@ -129,5 +129,29 @@ def split_pdf(pdf_path: str, page_groups: list[list[int]]) -> list[bytes]:
         
     return split_results
 
+def get_page_dimensions(pdf_path: str, page_number: int) -> tuple[float, float]:
+    """
+    Opens the PDF at the given path and returns the width and height of the specified page.
+
+    Why this exists:
+    The frontend's interactive page editor needs to know a page's real point-dimensions
+    to correctly convert a click position (in on-screen pixels) into the PDF
+    coordinate space text actually gets placed in.
+    """
+    try:
+        with fitz.open(pdf_path) as doc:
+            if page_number < 0 or page_number >= doc.page_count:
+                raise ValueError(
+                    f"Page number {page_number} is out of range. The PDF contains {doc.page_count} pages."
+                )
+            page = doc.load_page(page_number)
+            rect = page.rect
+            return (float(rect.width), float(rect.height))
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not get page dimensions from PDF file at {pdf_path}: {e}") from e
+
+
 
 

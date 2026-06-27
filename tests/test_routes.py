@@ -456,6 +456,92 @@ def test_split_pages_invalid_uuid(client):
     assert response.status_code == 400
     assert 'error' in response.get_json()
 
+def test_get_page_info_success(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "Test PDF")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    response = client.get(f'/page-info/{file_id}/0')
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert 'width' in json_data
+    assert 'height' in json_data
+    assert isinstance(json_data['width'], float)
+    assert isinstance(json_data['height'], float)
+    assert json_data['width'] > 0
+    assert json_data['height'] > 0
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_get_page_info_out_of_range(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = res.get_json()['file_id']
+
+    response = client.get(f'/page-info/{file_id}/99')
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_get_page_info_invalid_uuid(client):
+    response = client.get('/page-info/not-a-valid-uuid/0')
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+def test_get_thumbnail_zoom_success(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = res.get_json()['file_id']
+
+    response = client.get(f'/thumbnail/{file_id}/0?zoom=1.5')
+    assert response.status_code == 200
+    assert response.content_type == 'image/png'
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_get_thumbnail_zoom_invalid(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    file_id = res.get_json()['file_id']
+
+    response = client.get(f'/thumbnail/{file_id}/0?zoom=10')
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
 
 
 

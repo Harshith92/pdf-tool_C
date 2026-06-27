@@ -4,7 +4,8 @@ import io
 import zipfile
 from flask import Blueprint, request, jsonify, current_app, Response, render_template
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions
+
 
 
 main = Blueprint('main', __name__)
@@ -57,12 +58,37 @@ def get_thumbnail(file_id, page_number):
     if not os.path.exists(path):
         return jsonify({"error": "File not found"}), 404
 
+    zoom = request.args.get('zoom', default=0.3, type=float)
+    if not (0.1 <= zoom <= 3.0):
+        return jsonify({"error": "zoom must be between 0.1 and 3.0 inclusive"}), 400
+
     try:
-        png_bytes = render_thumbnail(path, page_number)
+        png_bytes = render_thumbnail(path, page_number, zoom=zoom)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
     return Response(png_bytes, mimetype='image/png'), 200
+
+@main.route('/page-info/<file_id>/<int:page_number>', methods=['GET'])
+def get_page_info(file_id, page_number):
+    try:
+        uuid.UUID(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id format"}), 400
+
+    filename = secure_filename(f"{file_id}.pdf")
+    path = os.path.join(current_app.instance_path, 'uploads', filename)
+
+    if not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    try:
+        width, height = get_page_dimensions(path, page_number)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify({"width": width, "height": height}), 200
+
 
 @main.route('/pages/process', methods=['POST'])
 def process_pages():
