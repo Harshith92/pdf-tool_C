@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, current_app, Response, render_tem
 from werkzeug.utils import secure_filename
 from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf
 
+
 main = Blueprint('main', __name__)
 
 @main.route('/')
@@ -175,6 +176,7 @@ def split_pages():
     response = Response(zip_bytes, mimetype='application/zip')
     response.headers['Content-Disposition'] = 'attachment; filename=split_files.zip'
     return response, 200
+
 
 
 
