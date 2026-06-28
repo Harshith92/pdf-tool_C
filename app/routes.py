@@ -240,21 +240,57 @@ def add_text_route():
     if isinstance(x, bool) or isinstance(y, bool) or not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
         return jsonify({"error": "x and y must be numbers"}), 400
 
-    page_index = data.get("page_index", 0)
+    # Optional fields validation
+    if "font_size" in data:
+        fs = data["font_size"]
+        if isinstance(fs, bool) or not isinstance(fs, (int, float)):
+            return jsonify({"error": "font_size must be a number"}), 400
+
+    if "rotation" in data:
+        rot = data["rotation"]
+        if isinstance(rot, bool) or not isinstance(rot, (int, float)):
+            return jsonify({"error": "rotation must be a number"}), 400
+
+    if "opacity" in data:
+        op = data["opacity"]
+        if isinstance(op, bool) or not isinstance(op, (int, float)):
+            return jsonify({"error": "opacity must be a number"}), 400
+
+    if "apply_to_all_pages" in data:
+        app_to_all = data["apply_to_all_pages"]
+        if not isinstance(app_to_all, bool):
+            return jsonify({"error": "apply_to_all_pages must be true or false"}), 400
+
+    apply_to_all = data.get("apply_to_all_pages", False)
+    if apply_to_all:
+        try:
+            total_pages = get_page_count(path)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        page_indices = list(range(total_pages))
+    else:
+        page_index = data.get("page_index", 0)
+        if not isinstance(page_index, int) or isinstance(page_index, bool):
+            return jsonify({"error": "page_index must be an integer"}), 400
+        page_indices = [page_index]
 
     try:
         pdf_bytes = insert_text_at_position(
             path,
-            page_indices=[page_index],
+            page_indices=page_indices,
             text=text,
             x=float(x),
-            y=float(y)
+            y=float(y),
+            font_size=float(data.get("font_size", 24)),
+            rotation=float(data.get("rotation", 0)),
+            opacity=float(data.get("opacity", 1.0))
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
+    filename = 'watermarked.pdf' if apply_to_all else 'text_added.pdf'
     response = Response(pdf_bytes, mimetype='application/pdf')
-    response.headers['Content-Disposition'] = 'attachment; filename=text_added.pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     return response, 200
 
 

@@ -629,6 +629,99 @@ def test_add_text_route_invalid_file_id(client):
     assert response.status_code == 400
     assert 'error' in response.get_json()
 
+def test_add_text_apply_to_all_pages(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    doc.new_page()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "WATERMARK",
+        "x": 50,
+        "y": 50,
+        "apply_to_all_pages": True
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    assert response.headers.get('Content-Disposition') == 'attachment; filename=watermarked.pdf'
+
+    with fitz.open(stream=response.data, filetype="pdf") as res_doc:
+        assert res_doc.page_count == 3
+        assert "WATERMARK" in res_doc[0].get_text()
+        assert "WATERMARK" in res_doc[1].get_text()
+        assert "WATERMARK" in res_doc[2].get_text()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_add_text_custom_styling(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "Styled",
+        "x": 100,
+        "y": 100,
+        "font_size": 40,
+        "rotation": 30,
+        "opacity": 0.5
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    assert response.headers.get('Content-Disposition') == 'attachment; filename=text_added.pdf'
+
+    with fitz.open(stream=response.data, filetype="pdf") as res_doc:
+        assert "Styled" in res_doc[0].get_text()
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+def test_add_text_apply_to_all_pages_type_error(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "Styled",
+        "x": 100,
+        "y": 100,
+        "apply_to_all_pages": "true"
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 400
+    assert "apply_to_all_pages must be true or false" in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
 
 
 
