@@ -424,6 +424,14 @@ main section p {
   margin-top: 1rem;
 }
 
+#addtext-page-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+
 
 
 

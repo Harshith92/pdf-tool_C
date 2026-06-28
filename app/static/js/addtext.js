@@ -5,6 +5,8 @@ let addTextBox = null;
 let addTextFontSize = 24;
 let addTextOpacity = 1;
 let addTextRotation = 0;
+let addTextPageIndex = 0;
+let addTextTotalPages = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
     const uploadZone = document.getElementById('addtext-upload-zone');
@@ -24,8 +26,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const rotationValue = document.getElementById('addtext-rotation-value');
     const fontsizeValue = document.getElementById('addtext-fontsize-value');
 
-    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !opacityValue || !rotationValue || !fontsizeValue) {
+    // Page navigation selectors
+    const pageNav = document.getElementById('addtext-page-nav');
+    const prevPageBtn = document.getElementById('addtext-prev-page-btn');
+    const nextPageBtn = document.getElementById('addtext-next-page-btn');
+    const pageIndicator = document.getElementById('addtext-page-indicator');
+
+    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !opacityValue || !rotationValue || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator) {
         return;
+    }
+
+    // Load preview of a specific PDF page
+    async function loadAddTextPage(pageIndex) {
+        try {
+            const response = await fetch(`/page-info/${addTextFileId}/${pageIndex}`);
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to retrieve page specifications');
+            }
+            const dimensions = await response.json();
+            addTextPageWidth = dimensions.width;
+            addTextPageHeight = dimensions.height;
+            addTextPageIndex = pageIndex;
+
+            canvasImg.src = `/thumbnail/${addTextFileId}/${pageIndex}?zoom=1.5`;
+            pageIndicator.textContent = `Page ${pageIndex + 1} of ${addTextTotalPages}`;
+            prevPageBtn.disabled = (pageIndex === 0);
+            nextPageBtn.disabled = (pageIndex === addTextTotalPages - 1);
+        } catch (error) {
+            uploadError.textContent = error.message;
+            uploadError.classList.remove('hidden');
+        }
     }
 
     // Trigger click on hidden file input when clicking upload zone
@@ -47,7 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
         addBoxBtn.classList.add('hidden');
         downloadBtn.classList.add('hidden');
         styleControls.classList.add('hidden');
+        pageNav.classList.add('hidden');
         addTextBox = null;
+        addTextPageIndex = 0;
 
         // Reset style states and slider defaults
         addTextFontSize = 24;
@@ -81,33 +114,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return response.json();
         })
-        .then(data => {
+        .then(async data => {
             addTextFileId = data.file_id;
-            // Fetch page info (width/height of page 0)
-            return fetch(`/page-info/${addTextFileId}/0`);
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(errData => {
-                    throw new Error(errData.error || 'Failed to retrieve page specifications');
-                });
-            }
-            return response.json();
-        })
-        .then(dimensions => {
-            addTextPageWidth = dimensions.width;
-            addTextPageHeight = dimensions.height;
+            addTextTotalPages = data.page_count;
 
-            // Set canvas image src with zoom parameter
-            canvasImg.src = `/thumbnail/${addTextFileId}/0?zoom=1.5`;
             canvasWrapper.classList.remove('hidden');
             addBoxBtn.classList.remove('hidden');
             downloadBtn.classList.remove('hidden');
+            pageNav.classList.remove('hidden');
+
+            await loadAddTextPage(0);
         })
         .catch(error => {
             uploadError.textContent = error.message;
             uploadError.classList.remove('hidden');
         });
+    });
+
+    // Previous page click handler
+    prevPageBtn.addEventListener('click', async () => {
+        if (addTextPageIndex > 0) {
+            await loadAddTextPage(addTextPageIndex - 1);
+        }
+    });
+
+    // Next page click handler
+    nextPageBtn.addEventListener('click', async () => {
+        if (addTextPageIndex < addTextTotalPages - 1) {
+            await loadAddTextPage(addTextPageIndex + 1);
+        }
     });
 
     // Add Box button click handler
