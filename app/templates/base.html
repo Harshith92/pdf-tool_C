@@ -86,6 +86,15 @@
                 <div class="canvas-wrapper hidden" id="addtext-canvas-wrapper">
                     <img id="addtext-canvas-img" alt="Page preview">
                 </div>
+                <div class="hidden" id="addtext-style-controls">
+                    <p class="info-text">Drag the box's corner handle to resize the text (<span id="addtext-fontsize-value">24px</span>)</p>
+                    <label>Opacity: <span id="addtext-opacity-value">100%</span>
+                        <input type="range" id="addtext-opacity-input" min="0.1" max="1" step="0.05" value="1">
+                    </label>
+                    <label>Rotation: <span id="addtext-rotation-value">0°</span>
+                        <input type="range" id="addtext-rotation-input" min="-180" max="180" step="1" value="0">
+                    </label>
+                </div>
                 <button id="addtext-add-box-btn" class="reset-btn hidden">+ Add Text Box</button>
                 <button id="addtext-download-btn" class="download-btn hidden">Apply & Download</button>
                 <p class="upload-error hidden" id="addtext-process-error"></p>
