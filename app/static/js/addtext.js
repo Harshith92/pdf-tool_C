@@ -32,7 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextPageBtn = document.getElementById('addtext-next-page-btn');
     const pageIndicator = document.getElementById('addtext-page-indicator');
 
-    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !opacityValue || !rotationValue || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator) {
+    // Watermark checkboxes selectors
+    const applyAllCheckbox = document.getElementById('addtext-apply-all-checkbox');
+    const applyAllLabel = document.getElementById('addtext-apply-all-label');
+
+    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !opacityValue || !rotationValue || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator || !applyAllCheckbox || !applyAllLabel) {
         return;
     }
 
@@ -79,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.classList.add('hidden');
         styleControls.classList.add('hidden');
         pageNav.classList.add('hidden');
+        applyAllLabel.classList.add('hidden');
+        applyAllCheckbox.checked = false;
         addTextBox = null;
         addTextPageIndex = 0;
 
@@ -122,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addBoxBtn.classList.remove('hidden');
             downloadBtn.classList.remove('hidden');
             pageNav.classList.remove('hidden');
+            applyAllLabel.classList.remove('hidden');
 
             await loadAddTextPage(0);
         })
@@ -182,10 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reveal styling controls panel
         styleControls.classList.remove('hidden');
 
-        // Apply current style states to the new textbox
+        // Apply current style states to the new textbox (rotating content area directly)
         content.style.fontSize = `${addTextFontSize}px`;
         content.style.opacity = addTextOpacity;
-        box.style.transform = `rotate(${addTextRotation}deg)`;
+        content.style.transform = `rotate(${addTextRotation}deg)`;
 
         // Implement dragging via plain mouse events on the move handle
         handle.addEventListener('mousedown', (event) => {
@@ -267,11 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
         addTextRotation = val;
         rotationValue.textContent = `${val}°`;
         if (addTextBox) {
-            addTextBox.style.transform = `rotate(${val}deg)`;
+            const contentArea = addTextBox.querySelector('.addtext-box-content');
+            if (contentArea) {
+                contentArea.style.transform = `rotate(${val}deg)`;
+            }
         }
     });
 
-    // Download/Apply button click handler (Placeholder behavior for this step)
+    // Download/Apply button click handler
     downloadBtn.addEventListener('click', () => {
         processError.textContent = '';
         processError.classList.add('hidden');
@@ -279,9 +289,67 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!addTextBox) {
             processError.textContent = 'Add a text box first';
             processError.classList.remove('hidden');
-        } else {
-            processError.textContent = 'Coming in the next step!';
-            processError.classList.remove('hidden');
+            return;
         }
+
+        const contentEl = addTextBox.querySelector('.addtext-box-content');
+        const text = contentEl.textContent.trim();
+        if (!text) {
+            processError.textContent = 'Type some text in the box first';
+            processError.classList.remove('hidden');
+            return;
+        }
+
+        const wrapperRect = canvasWrapper.getBoundingClientRect();
+        const scaleFactor = wrapperRect.width / addTextPageWidth;
+
+        // Compute positioning anchoring at left bottom corner of layout content box
+        const anchorXpx = addTextBox.offsetLeft + contentEl.offsetLeft;
+        const anchorYpx = addTextBox.offsetTop + contentEl.offsetTop + contentEl.offsetHeight;
+
+        const pdfX = anchorXpx / scaleFactor;
+        const pdfY = anchorYpx / scaleFactor;
+        const pdfFontSize = addTextFontSize / scaleFactor;
+        const applyAll = applyAllCheckbox.checked;
+
+        fetch('/pages/add-text', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_id: addTextFileId,
+                text: text,
+                x: pdfX,
+                y: pdfY,
+                font_size: pdfFontSize,
+                rotation: addTextRotation,
+                opacity: addTextOpacity,
+                apply_to_all_pages: applyAll,
+                page_index: addTextPageIndex
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Text insertion failed');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'output.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            processError.textContent = error.message;
+            processError.classList.remove('hidden');
+        });
     });
 });
