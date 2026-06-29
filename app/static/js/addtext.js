@@ -7,6 +7,7 @@ let addTextOpacity = 1;
 let addTextRotation = 0;
 let addTextPageIndex = 0;
 let addTextTotalPages = 1;
+let addTextColor = '#000000';
 
 document.addEventListener('DOMContentLoaded', () => {
     const uploadZone = document.getElementById('addtext-upload-zone');
@@ -21,9 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Styling controls and displays
     const styleControls = document.getElementById('addtext-style-controls');
     const opacityInput = document.getElementById('addtext-opacity-input');
+    const opacityNumberInput = document.getElementById('addtext-opacity-number-input');
+    const colorInput = document.getElementById('addtext-color-input');
     const rotationInput = document.getElementById('addtext-rotation-input');
     const rotationNumberInput = document.getElementById('addtext-rotation-number-input');
-    const opacityValue = document.getElementById('addtext-opacity-value');
     const fontsizeValue = document.getElementById('addtext-fontsize-value');
 
     // Page navigation selectors
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyAllCheckbox = document.getElementById('addtext-apply-all-checkbox');
     const applyAllLabel = document.getElementById('addtext-apply-all-label');
 
-    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !rotationNumberInput || !opacityValue || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator || !applyAllCheckbox || !applyAllLabel) {
+    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !opacityNumberInput || !colorInput || !rotationInput || !rotationNumberInput || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator || !applyAllCheckbox || !applyAllLabel) {
         return;
     }
 
@@ -81,6 +83,24 @@ document.addEventListener('DOMContentLoaded', () => {
         rotationNumberInput.value = angle;
     }
 
+    // Helper to apply opacity to the content block and synchronize inputs
+    function applyAddTextOpacity(percentValue) {
+        let val = parseFloat(percentValue);
+        if (isNaN(val)) {
+            val = 100;
+        }
+        addTextOpacity = val / 100;
+
+        if (addTextBox) {
+            const contentArea = addTextBox.querySelector('.addtext-box-content');
+            if (contentArea) {
+                contentArea.style.opacity = addTextOpacity;
+            }
+        }
+        opacityInput.value = addTextOpacity;
+        opacityNumberInput.value = val;
+    }
+
     // Trigger click on hidden file input when clicking upload zone
     uploadZone.addEventListener('click', () => {
         fileInput.click();
@@ -106,15 +126,17 @@ document.addEventListener('DOMContentLoaded', () => {
         addTextBox = null;
         addTextPageIndex = 0;
 
-        // Reset style states and slider defaults
+        // Reset style states and defaults
         addTextFontSize = 24;
         addTextOpacity = 1;
         addTextRotation = 0;
+        addTextColor = '#000000';
 
         opacityInput.value = 1;
+        opacityNumberInput.value = 100;
+        colorInput.value = '#000000';
         rotationInput.value = 0;
         rotationNumberInput.value = 0;
-        opacityValue.textContent = '100%';
         fontsizeValue.textContent = '24px';
 
         // Remove any existing box
@@ -211,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         content.style.fontSize = `${addTextFontSize}px`;
         content.style.opacity = addTextOpacity;
         content.style.transform = `rotate(${addTextRotation}deg)`;
+        content.style.color = addTextColor;
 
         // Implement dragging via plain mouse events on the move handle
         handle.addEventListener('mousedown', (event) => {
@@ -275,13 +298,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Opacity range input change listener
     opacityInput.addEventListener('input', () => {
-        const val = parseFloat(opacityInput.value);
-        addTextOpacity = val;
-        opacityValue.textContent = `${Math.round(val * 100)}%`;
+        applyAddTextOpacity(parseFloat(opacityInput.value) * 100);
+    });
+
+    // Opacity number input change listener
+    opacityNumberInput.addEventListener('input', () => {
+        applyAddTextOpacity(parseFloat(opacityNumberInput.value));
+    });
+
+    // Color picker input change listener
+    colorInput.addEventListener('input', () => {
+        addTextColor = colorInput.value;
         if (addTextBox) {
             const contentArea = addTextBox.querySelector('.addtext-box-content');
             if (contentArea) {
-                contentArea.style.opacity = val;
+                contentArea.style.color = addTextColor;
             }
         }
     });
@@ -327,6 +358,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const pdfFontSize = addTextFontSize / scaleFactor;
         const applyAll = applyAllCheckbox.checked;
 
+        // Parse hex color string to float RGB array
+        const hex = addTextColor.replace('#', '');
+        const colorArray = [
+            parseInt(hex.substring(0, 2), 16) / 255,
+            parseInt(hex.substring(2, 4), 16) / 255,
+            parseInt(hex.substring(4, 6), 16) / 255
+        ];
+
         fetch('/pages/add-text', {
             method: 'POST',
             headers: {
@@ -341,7 +380,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 rotation: addTextRotation,
                 opacity: addTextOpacity,
                 apply_to_all_pages: applyAll,
-                page_index: addTextPageIndex
+                page_index: addTextPageIndex,
+                color: colorArray
             })
         })
         .then(response => {

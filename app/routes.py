@@ -261,6 +261,14 @@ def add_text_route():
         if not isinstance(app_to_all, bool):
             return jsonify({"error": "apply_to_all_pages must be true or false"}), 400
 
+    if "color" in data:
+        col = data["color"]
+        if not isinstance(col, list) or len(col) != 3:
+            return jsonify({"error": "color must be a list of 3 numbers between 0 and 1"}), 400
+        for c in col:
+            if isinstance(c, bool) or not isinstance(c, (int, float)) or not (0 <= c <= 1):
+                return jsonify({"error": "color must be a list of 3 numbers between 0 and 1"}), 400
+
     apply_to_all = data.get("apply_to_all_pages", False)
     if apply_to_all:
         try:
@@ -283,7 +291,8 @@ def add_text_route():
             y=float(y),
             font_size=float(data.get("font_size", 24)),
             rotation=float(data.get("rotation", 0)),
-            opacity=float(data.get("opacity", 1.0))
+            opacity=float(data.get("opacity", 1.0)),
+            color=tuple(data.get("color", (0, 0, 0)))
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400

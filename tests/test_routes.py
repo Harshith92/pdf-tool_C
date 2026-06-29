@@ -723,6 +723,87 @@ def test_add_text_apply_to_all_pages_type_error(client, app):
         os.remove(saved_path)
 
 
+def test_add_text_color_success(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "Red",
+        "x": 50,
+        "y": 50,
+        "color": [1, 0, 0]
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_add_text_color_type_error(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "BadColor",
+        "x": 50,
+        "y": 50,
+        "color": [1, 0, "bad"]
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 400
+    assert "color must be a list of 3 numbers between 0 and 1" in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_add_text_color_length_error(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    data = {'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}
+    res = client.post('/upload', data=data, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "text": "ShortColor",
+        "x": 50,
+        "y": 50,
+        "color": [1, 0]
+    }
+    response = client.post('/pages/add-text', json=post_data)
+    assert response.status_code == 400
+    assert "color must be a list of 3 numbers between 0 and 1" in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
 
 
 
