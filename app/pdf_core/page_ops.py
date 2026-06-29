@@ -186,10 +186,15 @@ def insert_text_at_position(pdf_path: str, page_indices: list[int],
             for page_index in page_indices:
                 page = doc.load_page(page_index)
                 point = fitz.Point(x, y)
-                tw = fitz.TextWriter(page.rect, color=color, opacity=opacity)
-                tw.append(point, text, fontsize=font_size)
                 mat = fitz.Matrix(rotation)
-                tw.write_text(page, morph=(point, mat))
+                page.insert_text(
+                    point,
+                    text,
+                    fontsize=font_size,
+                    color=color,
+                    fill_opacity=opacity,
+                    morph=(point, mat),
+                )
             
             return doc.write()
     except ValueError:
