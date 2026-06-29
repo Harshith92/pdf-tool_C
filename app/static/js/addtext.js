@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Helper to apply rotation to the content block and synchronize inputs
+    // Helper to apply rotation to the outer box block and synchronize inputs
     function applyAddTextRotation(value) {
         let angle = parseFloat(value);
         if (isNaN(angle)) {
@@ -74,10 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addTextRotation = angle;
 
         if (addTextBox) {
-            const contentArea = addTextBox.querySelector('.addtext-box-content');
-            if (contentArea) {
-                contentArea.style.transform = `rotate(${angle}deg)`;
-            }
+            addTextBox.style.transform = `rotate(${angle}deg)`;
         }
         rotationInput.value = angle;
         rotationNumberInput.value = angle;
@@ -219,21 +216,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'addtext-resize-handle';
 
+        // Create the rotate handle and stem
+        const rotateStem = document.createElement('div');
+        rotateStem.className = 'addtext-rotate-stem';
+        const rotateHandle = document.createElement('div');
+        rotateHandle.className = 'addtext-rotate-handle';
+
         // Assembly
         box.appendChild(handle);
         box.appendChild(content);
         box.appendChild(resizeHandle);
+        box.appendChild(rotateStem);
+        box.appendChild(rotateHandle);
         canvasWrapper.appendChild(box);
         addTextBox = box;
 
         // Reveal styling controls panel
         styleControls.classList.remove('hidden');
 
-        // Apply current style states to the new textbox (rotating content area directly)
+        // Apply current style states to the new textbox (rotating box directly)
         content.style.fontSize = `${addTextFontSize}px`;
         content.style.opacity = addTextOpacity;
-        content.style.transform = `rotate(${addTextRotation}deg)`;
         content.style.color = addTextColor;
+        box.style.transform = `rotate(${addTextRotation}deg)`;
 
         // Implement dragging via plain mouse events on the move handle
         handle.addEventListener('mousedown', (event) => {
@@ -290,6 +295,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.addEventListener('mousemove', onMouseMoveResize);
             document.addEventListener('mouseup', onMouseUpResize);
+        });
+
+        // Implement drag-to-rotate logic on rotateHandle
+        rotateHandle.addEventListener('mousedown', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+
+            function onMouseMoveRotate(e) {
+                const wrapperRect = canvasWrapper.getBoundingClientRect();
+                const pivotX = wrapperRect.left + box.offsetLeft;
+                const pivotY = wrapperRect.top + box.offsetTop + box.offsetHeight;
+                const angleRad = Math.atan2(e.clientY - pivotY, e.clientX - pivotX);
+                let degrees = (angleRad * 180 / Math.PI) + 90;
+                if (degrees > 180) degrees -= 360;
+                if (degrees < -180) degrees += 360;
+                applyAddTextRotation(Math.round(degrees));
+            }
+
+            function onMouseUpRotate() {
+                document.removeEventListener('mousemove', onMouseMoveRotate);
+                document.removeEventListener('mouseup', onMouseUpRotate);
+            }
+
+            document.addEventListener('mousemove', onMouseMoveRotate);
+            document.addEventListener('mouseup', onMouseUpRotate);
         });
 
         // Set focus to the editable area so the user can immediately type
