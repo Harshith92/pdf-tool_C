@@ -202,6 +202,49 @@ def insert_text_at_position(pdf_path: str, page_indices: list[int],
     except Exception as e:
         raise ValueError(f"Could not insert text at position in PDF file at {pdf_path}: {e}") from e
 
+def insert_image_at_position(pdf_path: str, page_indices: list[int],
+                             image_path: str, x: float, y: float,
+                             width: float, height: float,
+                             rotation: float = 0) -> bytes:
+    """
+    Inserts an image at a specific position on one or more PDF pages.
+
+    Why this exists:
+    show_pdf_page (not insert_image) is used specifically because it's PyMuPDF's only
+    method supporting arbitrary (non-90-degree-multiple) rotation angles for images.
+    """
+    if not page_indices:
+        raise ValueError("page_indices cannot be empty")
+    if width <= 0:
+        raise ValueError(f"width must be positive, got {width}")
+    if height <= 0:
+        raise ValueError(f"height must be positive, got {height}")
+
+    try:
+        with fitz.open(pdf_path) as doc:
+            for idx in page_indices:
+                if idx < 0 or idx >= doc.page_count:
+                    raise ValueError(
+                        f"Page index {idx} is out of range. The PDF contains {doc.page_count} pages."
+                    )
+
+            img_doc = fitz.open(image_path)
+            img_pdf_bytes = img_doc.convert_to_pdf()
+            img_doc.close()
+            imgpdf = fitz.open("pdf", img_pdf_bytes)
+
+            rect = fitz.Rect(x, y, x + width, y + height)
+            for page_index in page_indices:
+                page = doc.load_page(page_index)
+                page.show_pdf_page(rect, imgpdf, 0, rotate=rotation, keep_proportion=True)
+
+            imgpdf.close()
+            return doc.write()
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not insert image at position in PDF file at {pdf_path}: {e}") from e
+
 
 
 

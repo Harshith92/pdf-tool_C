@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position
 
 
 
@@ -27,6 +27,14 @@ def temp_pdf():
     # Clean up the temp file after the tests run
     if os.path.exists(temp_path):
         os.remove(temp_path)
+
+@pytest.fixture
+def temp_image(tmp_path):
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 50, 50))
+    pix.set_rect(pix.irect, (255, 0, 0))
+    path = tmp_path / "test_image.png"
+    pix.save(str(path))
+    return str(path)
 
 @pytest.fixture
 def temp_pdf_factory():
@@ -209,6 +217,44 @@ def test_insert_text_at_position_invalid_opacity(temp_pdf):
 def test_insert_text_at_position_invalid_page_index(temp_pdf):
     with pytest.raises(ValueError):
         insert_text_at_position(temp_pdf, [5], "Hi", x=0, y=0)
+
+
+def test_insert_image_at_position_success(temp_pdf, temp_image):
+    result_bytes = insert_image_at_position(
+        temp_pdf, [0], temp_image, x=50, y=50, width=100, height=100
+    )
+    with fitz.open(stream=result_bytes, filetype="pdf") as doc:
+        assert doc.page_count == 3
+        assert len(doc[0].get_images()) >= 1
+        assert len(doc[1].get_images()) == 0
+
+def test_insert_image_at_position_multi_page(temp_pdf, temp_image):
+    result_bytes = insert_image_at_position(
+        temp_pdf, [0, 2], temp_image, x=10, y=10, width=50, height=50
+    )
+    with fitz.open(stream=result_bytes, filetype="pdf") as doc:
+        assert doc.page_count == 3
+        assert len(doc[0].get_images()) >= 1
+        assert len(doc[1].get_images()) == 0
+        assert len(doc[2].get_images()) >= 1
+
+def test_insert_image_at_position_zero_width(temp_pdf, temp_image):
+    with pytest.raises(ValueError):
+        insert_image_at_position(
+            temp_pdf, [0], temp_image, x=0, y=0, width=0, height=100
+        )
+
+def test_insert_image_at_position_invalid_page_index(temp_pdf, temp_image):
+    with pytest.raises(ValueError):
+        insert_image_at_position(
+            temp_pdf, [5], temp_image, x=0, y=0, width=50, height=50
+        )
+
+def test_insert_image_at_position_nonexistent_image(temp_pdf):
+    with pytest.raises(ValueError):
+        insert_image_at_position(
+            temp_pdf, [0], "nonexistent.png", x=0, y=0, width=50, height=50
+        )
 
 
 
