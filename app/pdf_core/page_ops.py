@@ -186,7 +186,7 @@ def insert_text_at_position(pdf_path: str, page_indices: list[int],
             for page_index in page_indices:
                 page = doc.load_page(page_index)
                 point = fitz.Point(x, y)
-                mat = fitz.Matrix(rotation)
+                mat = fitz.Matrix(-rotation)
                 page.insert_text(
                     point,
                     text,

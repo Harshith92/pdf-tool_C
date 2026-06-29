@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const styleControls = document.getElementById('addtext-style-controls');
     const opacityInput = document.getElementById('addtext-opacity-input');
     const rotationInput = document.getElementById('addtext-rotation-input');
+    const rotationNumberInput = document.getElementById('addtext-rotation-number-input');
     const opacityValue = document.getElementById('addtext-opacity-value');
-    const rotationValue = document.getElementById('addtext-rotation-value');
     const fontsizeValue = document.getElementById('addtext-fontsize-value');
 
     // Page navigation selectors
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyAllCheckbox = document.getElementById('addtext-apply-all-checkbox');
     const applyAllLabel = document.getElementById('addtext-apply-all-label');
 
-    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !opacityValue || !rotationValue || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator || !applyAllCheckbox || !applyAllLabel) {
+    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !addBoxBtn || !downloadBtn || !processError || !styleControls || !opacityInput || !rotationInput || !rotationNumberInput || !opacityValue || !fontsizeValue || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator || !applyAllCheckbox || !applyAllLabel) {
         return;
     }
 
@@ -61,6 +61,24 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadError.textContent = error.message;
             uploadError.classList.remove('hidden');
         }
+    }
+
+    // Helper to apply rotation to the content block and synchronize inputs
+    function applyAddTextRotation(value) {
+        let angle = parseFloat(value);
+        if (isNaN(angle)) {
+            angle = 0;
+        }
+        addTextRotation = angle;
+
+        if (addTextBox) {
+            const contentArea = addTextBox.querySelector('.addtext-box-content');
+            if (contentArea) {
+                contentArea.style.transform = `rotate(${angle}deg)`;
+            }
+        }
+        rotationInput.value = angle;
+        rotationNumberInput.value = angle;
     }
 
     // Trigger click on hidden file input when clicking upload zone
@@ -95,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         opacityInput.value = 1;
         rotationInput.value = 0;
+        rotationNumberInput.value = 0;
         opacityValue.textContent = '100%';
-        rotationValue.textContent = '0°';
         fontsizeValue.textContent = '24px';
 
         // Remove any existing box
@@ -270,15 +288,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Rotation range input change listener
     rotationInput.addEventListener('input', () => {
-        const val = parseFloat(rotationInput.value);
-        addTextRotation = val;
-        rotationValue.textContent = `${val}°`;
-        if (addTextBox) {
-            const contentArea = addTextBox.querySelector('.addtext-box-content');
-            if (contentArea) {
-                contentArea.style.transform = `rotate(${val}deg)`;
-            }
-        }
+        applyAddTextRotation(rotationInput.value);
+    });
+
+    // Rotation number input change listener
+    rotationNumberInput.addEventListener('input', () => {
+        applyAddTextRotation(rotationNumberInput.value);
     });
 
     // Download/Apply button click handler
