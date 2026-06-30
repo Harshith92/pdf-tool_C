@@ -2,9 +2,10 @@ import os
 import uuid
 import io
 import zipfile
+import tempfile
 from flask import Blueprint, request, jsonify, current_app, Response, render_template
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position
 
 
 
@@ -301,6 +302,109 @@ def add_text_route():
     response = Response(pdf_bytes, mimetype='application/pdf')
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     return response, 200
+
+
+@main.route('/pages/add-image', methods=['POST'])
+def add_image_route():
+    file_id = request.form.get('file_id')
+    if not file_id:
+        return jsonify({"error": "Missing file_id in form data"}), 400
+
+    try:
+        uuid.UUID(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id format"}), 400
+
+    filename = secure_filename(f"{file_id}.pdf")
+    path = os.path.join(current_app.instance_path, 'uploads', filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file provided"}), 400
+
+    image_file = request.files['image']
+    if not image_file or not image_file.filename:
+        return jsonify({"error": "No image file provided"}), 400
+
+    orig_filename = image_file.filename.lower()
+    allowed_exts = ('.png', '.jpg', '.jpeg', '.gif', '.bmp')
+    ext = None
+    for allowed_ext in allowed_exts:
+        if orig_filename.endswith(allowed_ext):
+            ext = allowed_ext
+            break
+
+    if ext is None:
+        return jsonify({"error": "Unsupported image format"}), 400
+
+    # Save to NamedTemporaryFile
+    temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+    temp_img_path = temp_img.name
+    try:
+        image_file.save(temp_img_path)
+        temp_img.close()
+
+        # Parse coordinate parameters
+        try:
+            x_str = request.form.get('x')
+            y_str = request.form.get('y')
+            w_str = request.form.get('width')
+            h_str = request.form.get('height')
+            if x_str is None or y_str is None or w_str is None or h_str is None:
+                raise ValueError("Missing coordinate parameters")
+            x = float(x_str)
+            y = float(y_str)
+            width = float(w_str)
+            height = float(h_str)
+        except ValueError:
+            return jsonify({"error": "x, y, width, and height must be numbers"}), 400
+
+        # Parse optional rotation
+        try:
+            rot_str = request.form.get('rotation', '0')
+            rotation = float(rot_str)
+        except ValueError:
+            return jsonify({"error": "rotation must be a number"}), 400
+
+        # Parse apply_to_all_pages
+        apply_to_all = request.form.get('apply_to_all_pages', 'false').lower() == 'true'
+
+        if apply_to_all:
+            try:
+                total_pages = get_page_count(path)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+            page_indices = list(range(total_pages))
+        else:
+            try:
+                page_index = int(request.form.get('page_index', '0'))
+            except ValueError:
+                return jsonify({"error": "page_index must be an integer"}), 400
+            page_indices = [page_index]
+
+        try:
+            pdf_bytes = insert_image_at_position(
+                path,
+                page_indices=page_indices,
+                image_path=temp_img_path,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                rotation=rotation
+            )
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        filename = 'image_watermarked.pdf' if apply_to_all else 'image_added.pdf'
+        response = Response(pdf_bytes, mimetype='application/pdf')
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        return response, 200
+
+    finally:
+        if os.path.exists(temp_img_path):
+            os.remove(temp_img_path)
 
 
 

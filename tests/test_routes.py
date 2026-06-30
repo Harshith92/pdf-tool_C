@@ -804,6 +804,159 @@ def test_add_text_color_length_error(client, app):
         os.remove(saved_path)
 
 
+def test_add_image_success(client, app):
+    doc = fitz.open()
+    for _ in range(3):
+        doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    # Build inline 20x20 PNG
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 20, 20))
+    pix.set_rect(pix.irect, (255, 0, 0))
+    img_bytes = pix.tobytes("png")
+
+    post_data = {
+        'file_id': file_id,
+        'image': (io.BytesIO(img_bytes), 'test_img.png'),
+        'x': '50',
+        'y': '50',
+        'width': '60',
+        'height': '60'
+    }
+    response = client.post('/pages/add-image', data=post_data, content_type='multipart/form-data')
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    
+    with fitz.open(stream=response.data, filetype="pdf") as res_doc:
+        assert len(res_doc[0].get_images()) >= 1
+        assert len(res_doc[1].get_images()) == 0
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_add_image_watermark(client, app):
+    doc = fitz.open()
+    for _ in range(3):
+        doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    # Build inline 20x20 PNG
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 20, 20))
+    pix.set_rect(pix.irect, (255, 0, 0))
+    img_bytes = pix.tobytes("png")
+
+    post_data = {
+        'file_id': file_id,
+        'image': (io.BytesIO(img_bytes), 'test_img.png'),
+        'x': '50',
+        'y': '50',
+        'width': '60',
+        'height': '60',
+        'apply_to_all_pages': 'true'
+    }
+    response = client.post('/pages/add-image', data=post_data, content_type='multipart/form-data')
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+    
+    with fitz.open(stream=response.data, filetype="pdf") as res_doc:
+        assert len(res_doc[0].get_images()) >= 1
+        assert len(res_doc[1].get_images()) >= 1
+        assert len(res_doc[2].get_images()) >= 1
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_add_image_missing_image(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        'file_id': file_id,
+        'x': '50',
+        'y': '50',
+        'width': '60',
+        'height': '60'
+    }
+    response = client.post('/pages/add-image', data=post_data, content_type='multipart/form-data')
+    assert response.status_code == 400
+    assert "No image file provided" in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_add_image_invalid_number(client, app):
+    doc = fitz.open()
+    doc.new_page()
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    # Build inline 20x20 PNG
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 20, 20))
+    pix.set_rect(pix.irect, (255, 0, 0))
+    img_bytes = pix.tobytes("png")
+
+    post_data = {
+        'file_id': file_id,
+        'image': (io.BytesIO(img_bytes), 'test_img.png'),
+        'x': '50',
+        'y': '50',
+        'width': 'not-a-number',
+        'height': '60'
+    }
+    response = client.post('/pages/add-image', data=post_data, content_type='multipart/form-data')
+    assert response.status_code == 400
+    assert "x, y, width, and height must be numbers" in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_add_image_invalid_file_id(client):
+    # Build inline 20x20 PNG
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 20, 20))
+    pix.set_rect(pix.irect, (255, 0, 0))
+    img_bytes = pix.tobytes("png")
+
+    post_data = {
+        'file_id': 'invalid-uuid',
+        'image': (io.BytesIO(img_bytes), 'test_img.png'),
+        'x': '50',
+        'y': '50',
+        'width': '60',
+        'height': '60'
+    }
+    response = client.post('/pages/add-image', data=post_data, content_type='multipart/form-data')
+    assert response.status_code == 400
+    assert "Invalid file_id format" in response.get_json()['error']
+
+
 
 
 
