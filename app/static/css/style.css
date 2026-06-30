@@ -469,6 +469,7 @@ main section p {
   border: 2px dashed var(--accent);
   border-radius: 3px;
   overflow: hidden;
+  transform-origin: left bottom;
 }
 
 .addimage-box-img {

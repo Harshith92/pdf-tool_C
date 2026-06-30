@@ -4,6 +4,7 @@ let addImagePageHeight = 0;
 let addImagePageIndex = 0;
 let addImageTotalPages = 1;
 let addImageBox = null;
+let addImageRotation = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     const uploadZone = document.getElementById('addimage-upload-zone');
@@ -70,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pageNav.classList.add('hidden');
         addImageBox = null;
         addImagePageIndex = 0;
+        addImageRotation = 0;
 
         // Remove any existing box
         const oldBox = document.getElementById('addimage-box');
@@ -158,12 +160,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'addtext-resize-handle';
 
+        // Create the rotate handle and stem
+        const rotateStem = document.createElement('div');
+        rotateStem.className = 'addtext-rotate-stem';
+        const rotateHandle = document.createElement('div');
+        rotateHandle.className = 'addtext-rotate-handle';
+
         // Assembly
         box.appendChild(handle);
         box.appendChild(imgEl);
         box.appendChild(resizeHandle);
+        box.appendChild(rotateStem);
+        box.appendChild(rotateHandle);
         canvasWrapper.appendChild(box);
         addImageBox = box;
+
+        // Set initial rotation
+        box.style.transform = `rotate(${addImageRotation}deg)`;
 
         // Implement dragging via plain mouse events on the move handle
         handle.addEventListener('mousedown', (event) => {
@@ -212,6 +225,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Implement drag-to-rotate logic on rotateHandle
+        rotateHandle.addEventListener('mousedown', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+
+            function onMouseMoveRotate(e) {
+                const wrapperRect = canvasWrapper.getBoundingClientRect();
+                const pivotX = wrapperRect.left + box.offsetLeft;
+                const pivotY = wrapperRect.top + box.offsetTop + box.offsetHeight;
+                const angleRad = Math.atan2(e.clientY - pivotY, e.clientX - pivotX);
+                let degrees = (angleRad * 180 / Math.PI) + 90;
+                if (degrees > 180) degrees -= 360;
+                if (degrees < -180) degrees += 360;
+                addImageRotation = Math.round(degrees);
+                box.style.transform = `rotate(${addImageRotation}deg)`;
+            }
+
+            function onMouseUpRotate() {
+                document.removeEventListener('mousemove', onMouseMoveRotate);
+                document.removeEventListener('mouseup', onMouseUpRotate);
+            }
+
+            document.addEventListener('mousemove', onMouseMoveRotate);
+            document.addEventListener('mouseup', onMouseUpRotate);
         });
     });
 
