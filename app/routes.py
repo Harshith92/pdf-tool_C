@@ -5,7 +5,7 @@ import zipfile
 import tempfile
 from flask import Blueprint, request, jsonify, current_app, Response, render_template
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position, get_page_words
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position, get_page_words, highlight_pdf_pages
 
 
 
@@ -425,6 +425,57 @@ def get_page_words_route(file_id, page_number):
         return jsonify({"error": str(e)}), 400
 
     return jsonify({"words": words}), 200
+
+
+@main.route('/pages/highlight', methods=['POST'])
+def highlight_route():
+    data = request.get_json() or {}
+    file_id = data.get("file_id")
+    if not file_id:
+        return jsonify({"error": "Missing file_id"}), 400
+
+    try:
+        uuid.UUID(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id format"}), 400
+
+    filename = secure_filename(f"{file_id}.pdf")
+    path = os.path.join(current_app.instance_path, 'uploads', filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    highlights = data.get("highlights")
+    if highlights is None or not isinstance(highlights, list) or len(highlights) == 0:
+        return jsonify({"error": "highlights is missing, not a list, or empty"}), 400
+
+    # Validate structural layout of entries
+    for entry in highlights:
+        if not isinstance(entry, dict):
+            return jsonify({"error": "Every highlight entry must be a dictionary"}), 400
+        if "page_index" not in entry or not isinstance(entry["page_index"], int) or isinstance(entry["page_index"], bool):
+            return jsonify({"error": "Every highlight entry must contain an integer 'page_index'"}), 400
+        if "rects" not in entry or not isinstance(entry["rects"], list) or len(entry["rects"]) == 0:
+            return jsonify({"error": "Every highlight entry must contain a non-empty list 'rects'"}), 400
+
+    if "color" in data:
+        color = data["color"]
+        if not isinstance(color, list) or len(color) != 3 or any(isinstance(c, bool) or not isinstance(c, (int, float)) or not (0 <= c <= 1) for c in color):
+            return jsonify({"error": "color must be a list of 3 numbers between 0 and 1"}), 400
+    else:
+        color = [1, 1, 0]
+
+    try:
+        pdf_bytes = highlight_pdf_pages(
+            path,
+            highlights=highlights,
+            color=tuple(color)
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    response = Response(pdf_bytes, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = 'attachment; filename=highlighted.pdf'
+    return response, 200
 
 
 

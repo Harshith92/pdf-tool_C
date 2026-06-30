@@ -1006,6 +1006,129 @@ def test_get_page_words_invalid_file_id(client):
     assert "Invalid file_id format" in response.get_json()['error']
 
 
+def test_highlight_pdf_pages_route_success(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    # Get words
+    response = client.get(f'/page-words/{file_id}/0')
+    assert response.status_code == 200
+    words = response.get_json()['words']
+    hello_word = next(w for w in words if w['text'] == 'Hello')
+    bbox = {
+        "x0": hello_word["x0"],
+        "y0": hello_word["y0"],
+        "x1": hello_word["x1"],
+        "y1": hello_word["y1"]
+    }
+
+    # Highlight
+    post_data = {
+        "file_id": file_id,
+        "highlights": [{"page_index": 0, "rects": [bbox]}],
+        "color": [1.0, 1.0, 0.0]
+    }
+    hl_response = client.post('/pages/highlight', json=post_data)
+    assert hl_response.status_code == 200
+    assert hl_response.mimetype == 'application/pdf'
+
+    with fitz.open(stream=hl_response.data, filetype="pdf") as res_doc:
+        assert len(list(res_doc[0].annots())) >= 1
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_highlight_pdf_pages_route_missing_highlights(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id
+    }
+    hl_response = client.post('/pages/highlight', json=post_data)
+    assert hl_response.status_code == 400
+    assert "highlights is missing" in hl_response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_highlight_pdf_pages_route_empty_highlights(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "highlights": []
+    }
+    hl_response = client.post('/pages/highlight', json=post_data)
+    assert hl_response.status_code == 400
+    assert "highlights is missing" in hl_response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_highlight_pdf_pages_route_invalid_file_id(client):
+    post_data = {
+        "file_id": "invalid-uuid",
+        "highlights": [{"page_index": 0, "rects": [{"x0": 0, "y0": 0, "x1": 10, "y1": 10}]}]
+    }
+    hl_response = client.post('/pages/highlight', json=post_data)
+    assert hl_response.status_code == 400
+    assert "Invalid file_id format" in hl_response.get_json()['error']
+
+
+def test_highlight_pdf_pages_route_bad_color(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    post_data = {
+        "file_id": file_id,
+        "highlights": [{"page_index": 0, "rects": [{"x0": 0, "y0": 0, "x1": 10, "y1": 10}]}],
+        "color": [1, 0, "bad"]
+    }
+    hl_response = client.post('/pages/highlight', json=post_data)
+    assert hl_response.status_code == 400
+    assert "color must be a list of 3 numbers between 0 and 1" in hl_response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
 
 
 
