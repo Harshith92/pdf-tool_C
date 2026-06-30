@@ -957,6 +957,55 @@ def test_add_image_invalid_file_id(client):
     assert "Invalid file_id format" in response.get_json()['error']
 
 
+def test_get_page_words_success(client, app):
+    # Build inline PDF with text "Hello World"
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    response = client.get(f'/page-words/{file_id}/0')
+    assert response.status_code == 200
+    words = response.get_json()['words']
+    hello_found = any(w['text'] == 'Hello' for w in words)
+    assert hello_found
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_get_page_words_out_of_range(client, app):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    pdf_bytes = doc.write()
+    doc.close()
+
+    res = client.post('/upload', data={'pdf_file': (io.BytesIO(pdf_bytes), 'test.pdf')}, content_type='multipart/form-data')
+    assert res.status_code == 200
+    file_id = res.get_json()['file_id']
+
+    response = client.get(f'/page-words/{file_id}/99')
+    assert response.status_code == 400
+    assert "out of range" in response.get_json()['error']
+
+    saved_path = os.path.join(app.instance_path, 'uploads', f"{file_id}.pdf")
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
+
+def test_get_page_words_invalid_file_id(client):
+    response = client.get('/page-words/invalid-uuid/0')
+    assert response.status_code == 400
+    assert "Invalid file_id format" in response.get_json()['error']
+
+
 
 
 

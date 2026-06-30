@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position, get_page_words
 
 
 
@@ -255,6 +255,36 @@ def test_insert_image_at_position_nonexistent_image(temp_pdf):
         insert_image_at_position(
             temp_pdf, [0], "nonexistent.png", x=0, y=0, width=50, height=50
         )
+
+
+@pytest.fixture
+def temp_pdf_with_text(tmp_path):
+    pdf_path = str(tmp_path / "temp_text.pdf")
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 100), "Hello World")
+    doc.save(pdf_path)
+    doc.close()
+    return pdf_path
+
+
+def test_get_page_words_success(temp_pdf_with_text):
+    words = get_page_words(temp_pdf_with_text, 0)
+    assert len(words) >= 2
+    
+    hello_found = any(w["text"] == "Hello" for w in words)
+    world_found = any(w["text"] == "World" for w in words)
+    assert hello_found
+    assert world_found
+
+    for w in words:
+        assert w["x1"] > w["x0"]
+        assert w["y1"] > w["y0"]
+
+
+def test_get_page_words_out_of_range(temp_pdf_with_text):
+    with pytest.raises(ValueError):
+        get_page_words(temp_pdf_with_text, 99)
 
 
 

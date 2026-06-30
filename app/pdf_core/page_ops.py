@@ -246,6 +246,40 @@ def insert_image_at_position(pdf_path: str, page_indices: list[int],
         raise ValueError(f"Could not insert image at position in PDF file at {pdf_path}: {e}") from e
 
 
+def get_page_words(pdf_path: str, page_number: int) -> list[dict]:
+    """
+    Retrieves the text words and their bounding boxes for a specific page.
+
+    Why this exists:
+    The frontend needs each word's exact position to build an invisible, selectable
+    text layer overlaid on the page image -- this is what lets a real click-and-drag
+    text selection work, the same technique browser-based PDF viewers use.
+    """
+    try:
+        with fitz.open(pdf_path) as doc:
+            if page_number < 0 or page_number >= doc.page_count:
+                raise ValueError(
+                    f"Page number {page_number} is out of range. The PDF contains {doc.page_count} pages."
+                )
+            page = doc.load_page(page_number)
+            words = page.get_text("words")
+            result = []
+            for w in words:
+                x0, y0, x1, y1, word_text = w[:5]
+                result.append({
+                    "text": word_text,
+                    "x0": float(x0),
+                    "y0": float(y0),
+                    "x1": float(x1),
+                    "y1": float(y1)
+                })
+            return result
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not get page words from PDF file at {pdf_path}: {e}") from e
+
+
 
 
 

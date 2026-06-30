@@ -5,7 +5,7 @@ import zipfile
 import tempfile
 from flask import Blueprint, request, jsonify, current_app, Response, render_template
 from werkzeug.utils import secure_filename
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position, get_page_words
 
 
 
@@ -405,6 +405,26 @@ def add_image_route():
     finally:
         if os.path.exists(temp_img_path):
             os.remove(temp_img_path)
+
+
+@main.route('/page-words/<file_id>/<int:page_number>', methods=['GET'])
+def get_page_words_route(file_id, page_number):
+    try:
+        uuid.UUID(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id format"}), 400
+
+    filename = secure_filename(f"{file_id}.pdf")
+    path = os.path.join(current_app.instance_path, 'uploads', filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    try:
+        words = get_page_words(path, page_number)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify({"words": words}), 200
 
 
 
