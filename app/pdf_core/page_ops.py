@@ -280,6 +280,54 @@ def get_page_words(pdf_path: str, page_number: int) -> list[dict]:
         raise ValueError(f"Could not get page words from PDF file at {pdf_path}: {e}") from e
 
 
+def highlight_pdf_pages(pdf_path: str, highlights: list[dict],
+                         color: tuple = (1, 1, 0)) -> bytes:
+    """
+    Applies standard highlight annotations to specified coordinates across PDF pages.
+
+    Why this exists:
+    uses PyMuPDF's native highlight annotation type (not a manually drawn rectangle)
+    so the result is a real, standard PDF highlight that any PDF reader recognizes
+    and can toggle/remove, exactly like highlights made in Adobe Acrobat or
+    similar tools.
+    """
+    if not highlights:
+        raise ValueError("highlights cannot be empty")
+
+    try:
+        with fitz.open(pdf_path) as doc:
+            for entry in highlights:
+                page_index = entry.get("page_index")
+                if page_index is None or page_index < 0 or page_index >= doc.page_count:
+                    raise ValueError(
+                        f"Page index {page_index} is out of range. The PDF contains {doc.page_count} pages."
+                    )
+                rects = entry.get("rects")
+                if not rects:
+                    raise ValueError(f"rects cannot be empty for page_index {page_index}")
+
+            # Second pass: Apply highlights
+            for entry in highlights:
+                page_index = entry["page_index"]
+                rects_data = entry["rects"]
+                page = doc.load_page(page_index)
+                
+                list_of_rects = [
+                    fitz.Rect(r["x0"], r["y0"], r["x1"], r["y1"])
+                    for r in rects_data
+                ]
+                annot = page.add_highlight_annot(list_of_rects)
+                if annot:
+                    annot.set_colors(stroke=color)
+                    annot.update()
+
+            return doc.write()
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not highlight PDF pages at {pdf_path}: {e}") from e
+
+
 
 
 

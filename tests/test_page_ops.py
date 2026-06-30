@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import fitz
-from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position, get_page_words
+from app.pdf_core.page_ops import get_page_count, render_thumbnail, reorder_and_delete_pages, merge_pdfs, split_pdf, get_page_dimensions, insert_text_at_position, insert_image_at_position, get_page_words, highlight_pdf_pages
 
 
 
@@ -285,6 +285,49 @@ def test_get_page_words_success(temp_pdf_with_text):
 def test_get_page_words_out_of_range(temp_pdf_with_text):
     with pytest.raises(ValueError):
         get_page_words(temp_pdf_with_text, 99)
+
+
+def test_highlight_pdf_pages_success(temp_pdf_with_text):
+    words = get_page_words(temp_pdf_with_text, 0)
+    hello_word = next(w for w in words if w["text"] == "Hello")
+    bbox = {
+        "x0": hello_word["x0"],
+        "y0": hello_word["y0"],
+        "x1": hello_word["x1"],
+        "y1": hello_word["y1"]
+    }
+    
+    result_bytes = highlight_pdf_pages(
+        temp_pdf_with_text,
+        [{"page_index": 0, "rects": [bbox]}]
+    )
+    
+    with fitz.open(stream=result_bytes, filetype="pdf") as doc:
+        page = doc[0]
+        annots = list(page.annots())
+        assert len(annots) >= 1
+        assert annots[0].type[0] == fitz.PDF_ANNOT_HIGHLIGHT
+
+
+def test_highlight_pdf_pages_empty_list(temp_pdf_with_text):
+    with pytest.raises(ValueError):
+        highlight_pdf_pages(temp_pdf_with_text, [])
+
+
+def test_highlight_pdf_pages_out_of_range(temp_pdf_with_text):
+    with pytest.raises(ValueError):
+        highlight_pdf_pages(
+            temp_pdf_with_text,
+            [{"page_index": 99, "rects": [{"x0": 0, "y0": 0, "x1": 10, "y1": 10}]}]
+        )
+
+
+def test_highlight_pdf_pages_empty_rects(temp_pdf_with_text):
+    with pytest.raises(ValueError):
+        highlight_pdf_pages(
+            temp_pdf_with_text,
+            [{"page_index": 0, "rects": []}]
+        )
 
 
 
