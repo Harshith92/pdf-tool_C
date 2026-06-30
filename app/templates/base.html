@@ -23,6 +23,7 @@
             <button data-tab="merge">Merge</button>
             <button data-tab="split">Split</button>
             <button data-tab="addtext">Add Text</button>
+            <button data-tab="addimage">Add Image</button>
         </nav>
 
         
@@ -113,6 +114,28 @@
                 <button id="addtext-download-btn" class="download-btn hidden">Apply & Download</button>
                 <p class="upload-error hidden" id="addtext-process-error"></p>
             </section>
+
+            <section id="section-addimage" class="hidden">
+                <h2>Add Image</h2>
+                <p>Place an image anywhere on the page.</p>
+                <div class="upload-zone" id="addimage-upload-zone">
+                    <input type="file" id="addimage-file-input" accept="application/pdf" hidden>
+                    <p>Click to choose a PDF</p>
+                </div>
+                <p class="upload-error hidden" id="addimage-upload-error"></p>
+                <div class="hidden" id="addimage-page-nav">
+                    <button id="addimage-prev-page-btn" class="reset-btn">← Previous</button>
+                    <span id="addimage-page-indicator" class="info-text">Page 1 of 1</span>
+                    <button id="addimage-next-page-btn" class="reset-btn">Next →</button>
+                </div>
+                <div class="canvas-wrapper hidden" id="addimage-canvas-wrapper">
+                    <img id="addimage-canvas-img" alt="Page preview">
+                </div>
+                <input type="file" id="addimage-image-file-input" accept="image/png,image/jpeg,image/gif,image/bmp" hidden>
+                <button id="addimage-add-image-btn" class="reset-btn hidden">+ Add Image</button>
+                <button id="addimage-download-btn" class="download-btn hidden">Apply & Download</button>
+                <p class="upload-error hidden" id="addimage-process-error"></p>
+            </section>
         </main>
 
 
@@ -123,6 +146,7 @@
     <script src="{{ url_for('static', filename='js/merge.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/split.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/addtext.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/addimage.js') }}" defer></script>
 
 
 

@@ -464,6 +464,21 @@ main section p {
   transform: translateX(-50%);
 }
 
+.addimage-box {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.addimage-box-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
 
 
 
