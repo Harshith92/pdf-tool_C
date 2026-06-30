@@ -5,6 +5,7 @@ let addImagePageIndex = 0;
 let addImageTotalPages = 1;
 let addImageBox = null;
 let addImageRotation = 0;
+let addImageSelectedFile = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const uploadZone = document.getElementById('addimage-upload-zone');
@@ -23,7 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextPageBtn = document.getElementById('addimage-next-page-btn');
     const pageIndicator = document.getElementById('addimage-page-indicator');
 
-    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !imageFileInput || !addImageBtn || !downloadBtn || !processError || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator) {
+    // Watermark checkbox selectors
+    const applyAllCheckbox = document.getElementById('addimage-apply-all-checkbox');
+    const applyAllLabel = document.getElementById('addimage-apply-all-label');
+
+    if (!uploadZone || !fileInput || !uploadError || !canvasWrapper || !canvasImg || !imageFileInput || !addImageBtn || !downloadBtn || !processError || !pageNav || !prevPageBtn || !nextPageBtn || !pageIndicator || !applyAllCheckbox || !applyAllLabel) {
         return;
     }
 
@@ -69,9 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
         addImageBtn.classList.add('hidden');
         downloadBtn.classList.add('hidden');
         pageNav.classList.add('hidden');
+        applyAllLabel.classList.add('hidden');
+        applyAllCheckbox.checked = false;
         addImageBox = null;
         addImagePageIndex = 0;
         addImageRotation = 0;
+        addImageSelectedFile = null;
 
         // Remove any existing box
         const oldBox = document.getElementById('addimage-box');
@@ -102,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addImageBtn.classList.remove('hidden');
             downloadBtn.classList.remove('hidden');
             pageNav.classList.remove('hidden');
+            applyAllLabel.classList.remove('hidden');
 
             await loadAddImagePage(0);
         })
@@ -136,6 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const file = imageFileInput.files[0];
         if (!file) return;
+
+        addImageSelectedFile = file;
 
         // Create the box container
         const box = document.createElement('div');
@@ -254,17 +265,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Apply & Download handler (Placeholder for this step)
+    // Apply & Download handler
     downloadBtn.addEventListener('click', () => {
         processError.textContent = '';
         processError.classList.add('hidden');
 
-        if (!addImageBox) {
+        if (!addImageBox || !addImageSelectedFile) {
             processError.textContent = 'Add an image first';
             processError.classList.remove('hidden');
-        } else {
-            processError.textContent = 'Apply and download is coming next!';
-            processError.classList.remove('hidden');
+            return;
         }
+
+        const wrapperRect = canvasWrapper.getBoundingClientRect();
+        const scaleFactor = wrapperRect.width / addImagePageWidth;
+
+        const pdfX = addImageBox.offsetLeft / scaleFactor;
+        const pdfY = addImageBox.offsetTop / scaleFactor;
+        const pdfWidth = addImageBox.offsetWidth / scaleFactor;
+        const pdfHeight = addImageBox.offsetHeight / scaleFactor;
+
+        const applyAll = applyAllCheckbox.checked;
+
+        const formData = new FormData();
+        formData.append('file_id', addImageFileId);
+        formData.append('image', addImageSelectedFile);
+        formData.append('x', pdfX);
+        formData.append('y', pdfY);
+        formData.append('width', pdfWidth);
+        formData.append('height', pdfHeight);
+        formData.append('rotation', addImageRotation);
+        formData.append('apply_to_all_pages', applyAll);
+        formData.append('page_index', addImagePageIndex);
+
+        fetch('/pages/add-image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Image insertion failed');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'output.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            processError.textContent = error.message;
+            processError.classList.remove('hidden');
+        });
     });
 });

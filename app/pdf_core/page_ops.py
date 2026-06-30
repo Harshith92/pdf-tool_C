@@ -236,7 +236,7 @@ def insert_image_at_position(pdf_path: str, page_indices: list[int],
             rect = fitz.Rect(x, y, x + width, y + height)
             for page_index in page_indices:
                 page = doc.load_page(page_index)
-                page.show_pdf_page(rect, imgpdf, 0, rotate=rotation, keep_proportion=True)
+                page.show_pdf_page(rect, imgpdf, 0, rotate=-rotation, keep_proportion=True)
 
             imgpdf.close()
             return doc.write()
