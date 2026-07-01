@@ -24,6 +24,7 @@
             <button data-tab="split">Split</button>
             <button data-tab="addtext">Add Text</button>
             <button data-tab="addimage">Add Image</button>
+            <button data-tab="highlight">Highlights</button>
         </nav>
 
         
@@ -140,6 +141,25 @@
                 <button id="addimage-download-btn" class="download-btn hidden">Apply & Download</button>
                 <p class="upload-error hidden" id="addimage-process-error"></p>
             </section>
+
+            <section id="section-highlight" class="hidden">
+                <h2>Highlights</h2>
+                <p>Drag across any text to highlight it.</p>
+                <div class="upload-zone" id="highlight-upload-zone">
+                    <input type="file" id="highlight-file-input" accept="application/pdf" hidden>
+                    <p>Click to choose a PDF</p>
+                </div>
+                <p class="upload-error hidden" id="highlight-upload-error"></p>
+                <div class="hidden" id="highlight-page-nav">
+                    <button id="highlight-prev-page-btn" class="reset-btn">← Previous</button>
+                    <span id="highlight-page-indicator" class="info-text">Page 1 of 1</span>
+                    <button id="highlight-next-page-btn" class="reset-btn">Next →</button>
+                </div>
+                <div class="canvas-wrapper hidden" id="highlight-canvas-wrapper">
+                    <img id="highlight-canvas-img" alt="Page preview" draggable="false">
+                    <div id="highlight-text-layer"></div>
+                </div>
+            </section>
         </main>
 
 
@@ -151,6 +171,7 @@
     <script src="{{ url_for('static', filename='js/split.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/addtext.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/addimage.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/highlight.js') }}" defer></script>
 
 
 
